@@ -175,7 +175,7 @@ def _facts_from_values(qv: QuoteVersion) -> QuoteFacts:
 def process(db_factory, document_id: str, force_rules: bool = False) -> None:
     """Worker entry point. Short transactions around the slow parse and model calls."""
     with db_factory() as db:
-        doc = db.get(Document, uuid.UUID(document_id), with_for_update=True)
+        doc = db.get(Document, uuid.UUID(document_id), with_for_update=True, populate_existing=True)
         if doc is None or doc.status not in ("uploaded", "extracting"):
             return
         stale = doc.extraction_started_at is None or doc.extraction_started_at < timeutil.now() - timedelta(minutes=3)
@@ -233,7 +233,7 @@ def process(db_factory, document_id: str, force_rules: bool = False) -> None:
         ex, meta = quote_extractor.extract(pages_raw, attribute_keys, workspace_id=ws_id, request_id=req_id, force_rules=force_rules)
 
     with db_factory() as db:
-        doc = db.get(Document, uuid.UUID(document_id), with_for_update=True)
+        doc = db.get(Document, uuid.UUID(document_id), with_for_update=True, populate_existing=True)
         if doc.status == "extracted":
             return
         page_rows: dict[int, DocumentPage] = {}
@@ -291,7 +291,7 @@ def correct(db: Session, actor: Actor, quote_id, field: str, new_value, note: st
     if not note or len(note.strip()) < 4:
         raise AppError("NOTE_REQUIRED", "Explain the correction in a short note.", 422)
     qid = parse_uuid(quote_id, "Quote")
-    quote = db.execute(select(Quote).where(Quote.id == qid, Quote.workspace_id == actor.workspace_id).with_for_update()).scalar_one_or_none()
+    quote = db.execute(select(Quote).where(Quote.id == qid, Quote.workspace_id == actor.workspace_id).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none()
     if quote is None:
         raise not_found("Quote")
     req = db.get(PurchaseRequest, quote.request_id)
@@ -320,7 +320,7 @@ def correct(db: Session, actor: Actor, quote_id, field: str, new_value, note: st
         original = old.attributes.get(key)
         new.attributes[key] = None if new_value in (None, "") else str(new_value)[:80]
     else:
-        original = getattr(old, field)
+        original = getattr(old, "stated_total" if field == "total" else field)
         if field in ("unit_price", "subtotal", "shipping", "tax", "discount", "total"):
             col = "stated_total" if field == "total" else field
             original = getattr(old, col)
@@ -381,7 +381,7 @@ def correct(db: Session, actor: Actor, quote_id, field: str, new_value, note: st
 def confirm_supplier_link(db: Session, actor: Actor, quote_id, supplier_id, note: str) -> Quote:
     """Explicit human confirmation that a quote belongs to a known supplier record."""
     actor.require("admin", "approver")
-    quote = db.execute(select(Quote).where(Quote.id == parse_uuid(quote_id, "Quote"), Quote.workspace_id == actor.workspace_id).with_for_update()).scalar_one_or_none()
+    quote = db.execute(select(Quote).where(Quote.id == parse_uuid(quote_id, "Quote"), Quote.workspace_id == actor.workspace_id).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none()
     sup = db.execute(select(Supplier).where(Supplier.id == parse_uuid(supplier_id, "Supplier"), Supplier.workspace_id == actor.workspace_id)).scalar_one_or_none()
     if quote is None or sup is None:
         raise not_found("Quote or supplier")

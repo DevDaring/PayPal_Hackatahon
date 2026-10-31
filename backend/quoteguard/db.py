@@ -21,7 +21,7 @@ def engine():
     global _engine, _SessionLocal
     if _engine is None:
         _engine = create_engine(get_settings().DATABASE_URL, pool_pre_ping=True, pool_size=10, max_overflow=20, future=True)
-        _SessionLocal = sessionmaker(bind=_engine, expire_on_commit=False, autoflush=False)
+        _SessionLocal = sessionmaker(bind=_engine, expire_on_commit=False, autoflush=True)
     return _engine
 
 

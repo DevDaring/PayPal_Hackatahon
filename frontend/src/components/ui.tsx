@@ -42,7 +42,9 @@ export function CheckBadge({ status, label }: { status: "pass" | "fail" | "unkno
 }
 
 export function Card({ children, className, ...rest }: { children: ReactNode; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
-  return <div {...rest} className={cx("rounded-2xl border border-line bg-surface shadow-[var(--shadow-card)]", className)}>{children}</div>;
+  // Callers may override the surface: skip the defaults they replace (no class-merging library needed).
+  const c = className ?? "";
+  return <div {...rest} className={cx("rounded-2xl shadow-[var(--shadow-card)]", !/\bborder-0\b/.test(c) && "border border-line", !/(^|\s)bg-/.test(c) && "bg-surface", className)}>{children}</div>;
 }
 
 export function PageHeader({ eyebrow, title, subtitle, actions }: { eyebrow?: ReactNode; title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {

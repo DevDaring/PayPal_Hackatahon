@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { AlertTriangle, BadgeCheck, Check, CircleDashed, Download, FileJson, FlaskConical, Loader2, Lock, RefreshCcw, ShieldCheck, Undo2, Wallet } from "lucide-react";
-import { api, ApiError, errorText } from "../lib/api";
+import { api, ApiError, errorText, post } from "../lib/api";
 import { dateTime, money, PAYMENT_STATUS } from "../lib/format";
 import { usePublicConfig, useRoles, useSession } from "../lib/session";
 import type { Approval, Payment, WfEvent } from "../lib/types";
@@ -50,14 +50,14 @@ export function CheckoutPanel({ requestId, approval, op: initialOp }: { requestI
   });
   const op = opQ.data ?? initialOp ?? null;
   const refresh = () => { qc.invalidateQueries({ queryKey: ["payment", opId] }); qc.invalidateQueries({ queryKey: ["request", requestId] }); };
-  const reconcile = useMutation({ mutationFn: () => api(`/payments/${opId}/reconcile`), onSuccess: (r: any) => { toast.success(`PayPal says: ${PAYMENT_STATUS[r.state]?.label ?? r.state}`); refresh(); }, onError: (e) => toast.error(errorText(e)) });
-  const arm = useMutation({ mutationFn: () => api(`/payments/${opId}/arm-lost-response`), onSuccess: () => { toast.message("Controlled test armed: the next capture response will be discarded"); refresh(); }, onError: (e) => toast.error(errorText(e)) });
-  const simApprove = useMutation({ mutationFn: () => api(`/payments/${opId}/simulated-approve`), onSuccess: () => doCapture(), onError: (e) => toast.error(errorText(e)) });
-  const startSim = useMutation({ mutationFn: () => api<Payment>(`/approvals/${approval.id}/checkout`), onSuccess: (o) => { setOpId(o.id); refresh(); }, onError: (e) => toast.error(errorText(e)) });
+  const reconcile = useMutation({ mutationFn: () => post(`/payments/${opId}/reconcile`), onSuccess: (r: any) => { toast.success(`PayPal says: ${PAYMENT_STATUS[r.state]?.label ?? r.state}`); refresh(); }, onError: (e) => toast.error(errorText(e)) });
+  const arm = useMutation({ mutationFn: () => post(`/payments/${opId}/arm-lost-response`), onSuccess: () => { toast.message("Controlled test armed: the next capture response will be discarded"); refresh(); }, onError: (e) => toast.error(errorText(e)) });
+  const simApprove = useMutation({ mutationFn: () => post(`/payments/${opId}/simulated-approve`), onSuccess: () => doCapture(), onError: (e) => toast.error(errorText(e)) });
+  const startSim = useMutation({ mutationFn: () => post<Payment>(`/approvals/${approval.id}/checkout`), onSuccess: (o) => { setOpId(o.id); refresh(); }, onError: (e) => toast.error(errorText(e)) });
 
   async function doCapture(id = opId) {
     try {
-      const r = await api<Payment>(`/payments/${id}/capture`);
+      const r = await post<Payment>(`/payments/${id}/capture`);
       qc.setQueryData(["payment", id], r);
       refresh();
       if (r.state === "completed") { toast.success(`Payment captured: ${money(r.captured_amount, r.currency)}`); nav(`/requests/${requestId}/receipt`); }
@@ -136,15 +136,15 @@ export function CheckoutPanel({ requestId, approval, op: initialOp }: { requestI
                 <PayPalButtons style={{ layout: "vertical", shape: "rect", label: "pay", height: 46 }} forceReRender={[opId]}
                   createOrder={async () => {
                     try {
-                      const o = await api<Payment>(`/approvals/${approval.id}/checkout`);
+                      const o = await post<Payment>(`/approvals/${approval.id}/checkout`);
                       setOpId(o.id);
                       qc.setQueryData(["payment", o.id], o);
                       if (!o.provider_order_id || o.state !== "awaiting_payer") throw new ApiError(409, o.last_error_code ?? "NOT_READY", o.last_error_message ?? `Payment is ${o.state}`);
                       return o.provider_order_id;
                     } catch (e) { toast.error(errorText(e)); refresh(); throw e; }
                   }}
-                  onApprove={async () => { const o = await api<Payment>(`/approvals/${approval.id}/checkout`); await doCapture(o.id); }}
-                  onCancel={async () => { if (opId) { await api(`/payments/${opId}/buyer-canceled`).catch(() => {}); refresh(); } toast.message("PayPal window closed — nothing was charged. You can try again."); }}
+                  onApprove={async () => { const o = await post<Payment>(`/approvals/${approval.id}/checkout`); await doCapture(o.id); }}
+                  onCancel={async () => { if (opId) { await post(`/payments/${opId}/buyer-canceled`).catch(() => {}); refresh(); } toast.message("PayPal window closed — nothing was charged. You can try again."); }}
                   onError={(err) => { console.error(err); toast.error("PayPal could not complete this step. Nothing was charged."); refresh(); }} />
               </PayPalScriptProvider>
               {isAdmin && me?.workspace?.is_demo && op?.state === "awaiting_payer" && !op.fault_injection_armed && (

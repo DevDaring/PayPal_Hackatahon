@@ -39,7 +39,7 @@ from .context import Actor, get_request, parse_uuid
 
 
 def _lock_request(db: Session, req_id) -> PurchaseRequest:
-    return db.execute(select(PurchaseRequest).where(PurchaseRequest.id == req_id).with_for_update()).scalar_one()
+    return db.execute(select(PurchaseRequest).where(PurchaseRequest.id == req_id).with_for_update().execution_options(populate_existing=True)).scalar_one()
 
 
 def build_terms(db: Session, req: PurchaseRequest, quote: Quote) -> dict:
@@ -168,10 +168,10 @@ def _end(appr: Approval, status: str, reason: str, details: dict | None = None) 
 def invalidate_for_request(db: Session, req: PurchaseRequest, reason: str, *, actor: Actor | None = None, details: dict | None = None) -> int:
     """Called by every change that could alter the purchase. In-flight captures freeze changes."""
     _lock_request(db, req.id)
-    lives = db.execute(select(Approval).where(Approval.request_id == req.id, Approval.status.in_(("active", "consumed_for_execution"))).with_for_update()).scalars().all()
+    lives = db.execute(select(Approval).where(Approval.request_id == req.id, Approval.status.in_(("active", "consumed_for_execution"))).with_for_update().execution_options(populate_existing=True)).scalars().all()
     n = 0
     for appr in lives:
-        op = db.execute(select(PaymentOperation).where(PaymentOperation.approval_id == appr.id).with_for_update()).scalar_one_or_none()
+        op = db.execute(select(PaymentOperation).where(PaymentOperation.approval_id == appr.id).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none()
         if op is not None and op.state in ("capture_pending", "reconciling"):
             raise AppError("PAYMENT_IN_PROGRESS", "A payment capture is in progress for the approved snapshot; changes are frozen until it is reconciled.", 409)
         if op is not None and op.state == "completed":
@@ -234,10 +234,10 @@ def revoke(db: Session, actor: Actor, approval_id, reason: str) -> Approval:
     if appr is None:
         raise not_found("Approval")
     _lock_request(db, appr.request_id)
-    appr = db.execute(select(Approval).where(Approval.id == appr.id).with_for_update()).scalar_one()
+    appr = db.execute(select(Approval).where(Approval.id == appr.id).with_for_update().execution_options(populate_existing=True)).scalar_one()
     if appr.status not in ("active", "consumed_for_execution"):
         return appr
-    op = db.execute(select(PaymentOperation).where(PaymentOperation.approval_id == appr.id).with_for_update()).scalar_one_or_none()
+    op = db.execute(select(PaymentOperation).where(PaymentOperation.approval_id == appr.id).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none()
     if op and op.state in ("capture_pending", "reconciling", "completed"):
         raise AppError("PAYMENT_IN_PROGRESS", "Payment is already being captured or is complete; the approval can no longer be revoked.", 409)
     if op:

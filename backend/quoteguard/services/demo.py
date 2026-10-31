@@ -156,7 +156,7 @@ class _Recorder:
 
     def step(self, title: str, status: str, detail: str = "", data: dict | None = None):
         with session_scope() as db:
-            r = db.get(DemoScenarioRun, self.run_id, with_for_update=True)
+            r = db.get(DemoScenarioRun, self.run_id, with_for_update=True, populate_existing=True)
             r.steps = [*r.steps, {"title": title, "status": status, "detail": detail, "data": data or {}, "at": timeutil.now().isoformat()}]
 
 
@@ -250,7 +250,9 @@ def _scn_amount_changed(actor: Actor, rec: _Recorder):
     appr1 = _approve(actor, rid, qid, rec)
     with session_scope() as db:
         documents.correct(db, actor, qid, "shipping", "50.00", "Supplier emailed a revised quote: shipping $30 → $50", reason="supplier_revision")
-    rec.step("Supplier revision recorded through the normal correction service", "info", "Shipping $30.00 → $50.00 creates quote version 2 (total $590.00).")
+    with session_scope() as db:
+        documents.correct(db, actor, qid, "total", "590.00", "Same revised quote restates the total as $590", reason="supplier_revision")
+    rec.step("Supplier revision recorded through the normal correction service", "info", "Shipping $30.00 → $50.00 and total $570.00 → $590.00 (quote versions 2–3).")
     _, err = _attempt_checkout(actor, appr1)
     a_blocked = err is not None
     rec.step("Checkout attempted with the original approval", "blocked" if a_blocked else "failed", f"{err.code}: {err.message}" if err else "NOT BLOCKED — checkout started.", {"code": err.code if err else None})
@@ -281,7 +283,7 @@ def _scn_merchant_changed(actor: Actor, rec: _Recorder):
     a_blocked = err is not None
     rec.step("Checkout attempted with the original approval", "blocked" if a_blocked else "failed", f"{err.code}: {err.message}" if err else "NOT BLOCKED", {"code": err.code if err else None})
     with session_scope() as db:
-        b = db.execute(select(MerchantBinding).where(MerchantBinding.supplier_id == db.get(Quote, uuid.UUID(qid)).supplier_id).with_for_update()).scalar_one()
+        b = db.execute(select(MerchantBinding).where(MerchantBinding.supplier_id == db.get(Quote, uuid.UUID(qid)).supplier_id).with_for_update().execution_options(populate_existing=True)).scalar_one()
         b.merchant_id, b.version = original, b.version + 1
     run_analysis(rid)
     appr2 = _approve(actor, rid, qid, rec)
@@ -371,7 +373,7 @@ def _scn_lost_response(actor: Actor, rec: _Recorder):
     op = payments.start_checkout(session_scope, actor, appr)
     payments.simulated_buyer_approve(session_scope, actor, op["id"])
     with session_scope() as db:
-        db.get(PaymentOperation, uuid.UUID(op["id"])).fault_injection = "drop_capture_response"
+        payments._lock_op(db, uuid.UUID(op["id"])).fault_injection = "drop_capture_response"
     rec.step("Fault injection armed", "info", "The provider adapter will perform the capture but its response will be discarded.")
     res = payments.capture(session_scope, actor, op["id"])
     rec.step("Capture response lost", "ok" if res["state"] == "reconciling" else "failed", f"Payment state after the lost response: {res['state']} (not 'failed', not 'paid').")

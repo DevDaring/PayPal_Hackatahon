@@ -95,7 +95,7 @@ def order_date(req: PurchaseRequest):
 
 
 def evaluate_request(db: Session, request_id) -> dict | None:
-    req = db.get(PurchaseRequest, uuid.UUID(str(request_id)), with_for_update=True)
+    req = db.get(PurchaseRequest, uuid.UUID(str(request_id)), with_for_update=True, populate_existing=True)
     if req is None or req.current_version_id is None:
         return None
     rv = db.get(RequestVersion, req.current_version_id)
@@ -261,7 +261,7 @@ def explain(db_factory, request_id) -> None:
     except AIUnavailable:
         out, method, model = _fallback_explanation(payload), "template", None
     with db_factory() as db:
-        req = db.get(PurchaseRequest, uuid.UUID(str(request_id)), with_for_update=True)
+        req = db.get(PurchaseRequest, uuid.UUID(str(request_id)), with_for_update=True, populate_existing=True)
         req.explanation = {**out, "method": method, "model": model, "prompt_version": EXPLAIN_PROMPT_VERSION if method == "llm" else None, "input_hash": key,
                            "evidence": evid, "generated_at": timeutil.now().isoformat(),
                            "disclaimer": "Generated summary of a deterministic result. It is not the model's private reasoning and cannot change totals or eligibility."}

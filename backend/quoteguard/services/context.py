@@ -49,7 +49,7 @@ def get_request(db: Session, actor: Actor, request_id, *, for_update: bool = Fal
         raise not_found("Purchase request") from None
     q = select(PurchaseRequest).where(PurchaseRequest.id == rid, PurchaseRequest.workspace_id == actor.workspace_id)
     if for_update:
-        q = q.with_for_update()
+        q = q.with_for_update().execution_options(populate_existing=True)
     req = db.execute(q).scalar_one_or_none()
     if req is None:
         raise not_found("Purchase request")

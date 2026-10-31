@@ -86,6 +86,13 @@ def op_json(op: PaymentOperation, db: Session | None = None) -> dict:
     return out
 
 
+def _lock_op(db: Session, op_id) -> PaymentOperation:
+    """Lock order everywhere: purchase_requests → payment_operations (events reference the request)."""
+    rid = db.execute(select(PaymentOperation.request_id).where(PaymentOperation.id == op_id)).scalar_one()
+    db.execute(select(PurchaseRequest.id).where(PurchaseRequest.id == rid).with_for_update().execution_options(populate_existing=True))
+    return db.execute(select(PaymentOperation).where(PaymentOperation.id == op_id).with_for_update().execution_options(populate_existing=True)).scalar_one()
+
+
 def _lock_op_chain(db: Session, actor: Actor | None, op_id) -> tuple[PurchaseRequest, Approval, PaymentOperation]:
     q = select(PaymentOperation).where(PaymentOperation.id == parse_uuid(op_id, "Payment"))
     if actor is not None:
@@ -93,9 +100,9 @@ def _lock_op_chain(db: Session, actor: Actor | None, op_id) -> tuple[PurchaseReq
     op = db.execute(q).scalar_one_or_none()
     if op is None:
         raise not_found("Payment")
-    req = db.execute(select(PurchaseRequest).where(PurchaseRequest.id == op.request_id).with_for_update()).scalar_one()
-    appr = db.execute(select(Approval).where(Approval.id == op.approval_id).with_for_update()).scalar_one()
-    op = db.execute(select(PaymentOperation).where(PaymentOperation.id == op.id).with_for_update()).scalar_one()
+    req = db.execute(select(PurchaseRequest).where(PurchaseRequest.id == op.request_id).with_for_update().execution_options(populate_existing=True)).scalar_one()
+    appr = db.execute(select(Approval).where(Approval.id == op.approval_id).with_for_update().execution_options(populate_existing=True)).scalar_one()
+    op = db.execute(select(PaymentOperation).where(PaymentOperation.id == op.id).with_for_update().execution_options(populate_existing=True)).scalar_one()
     return req, appr, op
 
 
@@ -118,8 +125,8 @@ def start_checkout(db_factory: DBFactory, actor: Actor, approval_id) -> dict:
 
     error: AppError | None = None
     with db_factory() as db:
-        db.execute(select(PurchaseRequest).where(PurchaseRequest.id == appr.request_id).with_for_update()).scalar_one()
-        appr = db.execute(select(Approval).where(Approval.id == aid).with_for_update()).scalar_one()
+        db.execute(select(PurchaseRequest).where(PurchaseRequest.id == appr.request_id).with_for_update().execution_options(populate_existing=True)).scalar_one()
+        appr = db.execute(select(Approval).where(Approval.id == aid).with_for_update().execution_options(populate_existing=True)).scalar_one()
         existing = db.execute(select(PaymentOperation).where(PaymentOperation.approval_id == aid)).scalar_one_or_none()
         if existing is not None:  # a concurrent click won the lock first
             return _existing_checkout(existing, db)
@@ -166,7 +173,7 @@ def _create_order_call(db_factory: DBFactory, op_id: uuid.UUID, body: dict) -> d
         res = provider.create_order(body, req_id)
     except ProviderAmbiguous as e:
         with db_factory() as db:
-            op = db.get(PaymentOperation, op_id, with_for_update=True)
+            op = _lock_op(db, op_id)
             _tx(db, op.id, "create_order", "timeout", request_id=req_id, err=e)
             if op.state == "order_creating":
                 op.state, op.last_error_code, op.updated_at = "reconciling", "PROVIDER_TIMEOUT", timeutil.now()
@@ -175,10 +182,10 @@ def _create_order_call(db_factory: DBFactory, op_id: uuid.UUID, body: dict) -> d
             return op_json(op, db)
     except ProviderError as e:
         with db_factory() as db:
-            op = db.get(PaymentOperation, op_id, with_for_update=True)
+            op = _lock_op(db, op_id)
             _tx(db, op.id, "create_order", "error", request_id=req_id, err=e)
             op.state, op.last_error_code, op.last_error_message, op.updated_at = "failed", e.code, e.message[:500], timeutil.now()
-            appr = db.get(Approval, op.approval_id, with_for_update=True)
+            appr = db.get(Approval, op.approval_id, with_for_update=True, populate_existing=True)
             appr.status, appr.ended_at, appr.end_reason = "invalidated", timeutil.now(), f"PayPal rejected order creation ({e.code})"
             _event(db, op, "failed", f"PayPal rejected order creation: {e.code}", e.message[:300])
         raise AppError("PROVIDER_REJECTED", f"PayPal rejected the order: {e.message}", 502, {"provider_code": e.code}) from None
@@ -188,7 +195,7 @@ def _create_order_call(db_factory: DBFactory, op_id: uuid.UUID, body: dict) -> d
 def _apply_order_created(db_factory: DBFactory, op_id, res: ProviderResult) -> dict:
     s = order_summary(res.body)
     with db_factory() as db:
-        op = db.get(PaymentOperation, op_id, with_for_update=True)
+        op = _lock_op(db, op_id)
         _tx(db, op.id, "create_order", "ok", request_id=op.order_request_id, res=res, ref=s["id"], status=s["status"], summary=s)
         if s["amount"] != fmt(op.amount) or s["currency"] != op.currency or s["custom_id"] != str(op.id):
             op.state, op.last_error_code, op.updated_at = "failed", "ORDER_MISMATCH", timeutil.now()
@@ -247,14 +254,14 @@ def _verify_and_capture(db_factory: DBFactory, op_id, order_id: str, adapter_kin
         got = provider.get_order(order_id)
     except (ProviderAmbiguous, ProviderError) as e:
         with db_factory() as db:
-            op = db.get(PaymentOperation, op_id, with_for_update=True)
+            op = _lock_op(db, op_id)
             _tx(db, op.id, "get_order", "timeout" if isinstance(e, ProviderAmbiguous) else "error", err=e, ref=order_id)
             if op.state == "capture_pending":
                 op.state, op.last_error_code, op.last_error_message, op.updated_at = "awaiting_payer", "PROVIDER_UNAVAILABLE", "PayPal could not be reached to verify the order; nothing was captured. Try again.", timeutil.now()
             return op_json(op, db)
     s = order_summary(got.body)
     with db_factory() as db:
-        op = db.get(PaymentOperation, op_id, with_for_update=True)
+        op = _lock_op(db, op_id)
         _tx(db, op.id, "get_order", "ok", res=got, ref=order_id, status=s["status"], summary=s)
         problem = _validate_order_for_capture(op, s)
         if problem:
@@ -275,13 +282,13 @@ def _verify_and_capture(db_factory: DBFactory, op_id, order_id: str, adapter_kin
         if fault == "drop_capture_response":
             # Controlled Demo Lab test: the provider DID process the capture; we discard its answer.
             with db_factory() as db:
-                op = db.get(PaymentOperation, op_id, with_for_update=True)
+                op = _lock_op(db, op_id)
                 _tx(db, op.id, "capture", "response_discarded_by_test", request_id=cap_req, summary={"note": "Controlled test discarded the provider response"})
                 op.fault_injection = None
             raise ProviderAmbiguous("controlled test: response discarded")
     except ProviderAmbiguous as e:
         with db_factory() as db:
-            op = db.get(PaymentOperation, op_id, with_for_update=True)
+            op = _lock_op(db, op_id)
             if not str(e).startswith("controlled test"):
                 _tx(db, op.id, "capture", "timeout", request_id=cap_req, err=e)
             op.state, op.last_error_code, op.last_error_message, op.updated_at = "reconciling", "CAPTURE_RESULT_UNKNOWN", "The capture result was not received. Checking PayPal before doing anything else.", timeutil.now()
@@ -292,7 +299,7 @@ def _verify_and_capture(db_factory: DBFactory, op_id, order_id: str, adapter_kin
         if e.code in ("ORDER_ALREADY_CAPTURED", "DUPLICATE_REQUEST_ID"):
             return reconcile(db_factory, str(op_id), source="already-captured")
         with db_factory() as db:
-            op = db.get(PaymentOperation, op_id, with_for_update=True)
+            op = _lock_op(db, op_id)
             _tx(db, op.id, "capture", "error", request_id=cap_req, err=e)
             if e.code in ("INSTRUMENT_DECLINED", "PAYER_ACTION_REQUIRED"):
                 op.state, op.last_error_code, op.last_error_message = "awaiting_payer", e.code, "PayPal declined the funding source. The buyer can choose another one."
@@ -309,7 +316,7 @@ def _apply_capture(db_factory: DBFactory, op_id, body: dict, *, res: ProviderRes
     s = order_summary(body)
     cap = s["captures"][0] if s["captures"] else None
     with db_factory() as db:
-        op = db.get(PaymentOperation, op_id, with_for_update=True)
+        op = _lock_op(db, op_id)
         _tx(db, op.id, call, "ok", request_id=op.capture_request_id if call == "capture" else None, res=res, ref=cap["id"] if cap else s["id"], status=cap["status"] if cap else s["status"], summary=s)
         if op.state == "completed":
             return {**op_json(op, db), "duplicate": True}  # never regress or double-apply
@@ -342,7 +349,7 @@ def _apply_capture(db_factory: DBFactory, op_id, body: dict, *, res: ProviderRes
 def reconcile(db_factory: DBFactory, op_id: str, source: str = "worker") -> dict:
     """Authoritative lookup. Retries only the SAME logical operation with the SAME request id."""
     with db_factory() as db:
-        op = db.get(PaymentOperation, uuid.UUID(str(op_id)), with_for_update=True)
+        op = _lock_op(db, uuid.UUID(str(op_id)))
         if op is None:
             raise not_found("Payment")
         if op.state in ("completed", "canceled", "failed") and source != "webhook":
@@ -374,7 +381,7 @@ def reconcile(db_factory: DBFactory, op_id: str, source: str = "worker") -> dict
             raise
         return _apply_capture(db_factory, op_uuid, res.body, res=res, call="capture")
     with db_factory() as db:
-        op = db.get(PaymentOperation, op_uuid, with_for_update=True)
+        op = _lock_op(db, op_uuid)
         _tx(db, op.id, "get_order", "ok", res=got, ref=order_id, status=s["status"], summary=s)
         op.provider_order_status = s["status"]
         if s["status"] in ("CREATED", "PAYER_ACTION_REQUIRED", "SAVED") and op.state in ("reconciling", "capture_pending", "order_creating"):
@@ -392,7 +399,7 @@ def recover_stuck(db: Session, older_than_seconds: int = 45) -> int:
     from datetime import timedelta
 
     cutoff = timeutil.now() - timedelta(seconds=older_than_seconds)
-    stuck = db.execute(select(PaymentOperation).where(PaymentOperation.state.in_(("order_creating", "capture_pending")), PaymentOperation.updated_at < cutoff).with_for_update(skip_locked=True)).scalars().all()
+    stuck = db.execute(select(PaymentOperation).where(PaymentOperation.state.in_(("order_creating", "capture_pending")), PaymentOperation.updated_at < cutoff).with_for_update(skip_locked=True).execution_options(populate_existing=True)).scalars().all()
     for op in stuck:
         op.state, op.last_error_code, op.updated_at = "reconciling", "RECOVERED_AFTER_RESTART", timeutil.now()
         jobs.enqueue(db, "reconcile_payment", {"operation_id": op.id}, dedupe_key=f"reconcile:{op.id}", max_attempts=8)
@@ -456,9 +463,9 @@ def refund(db_factory: DBFactory, actor: Actor, op_id, amount: str, note: str) -
             db.get(Refund, rid).state = "failed"
         raise AppError("PROVIDER_REJECTED", f"PayPal rejected the refund: {e.message}", 502) from None
     with db_factory() as db:
-        r = db.get(Refund, rid, with_for_update=True)
+        op = _lock_op(db, db.get(Refund, rid).operation_id)
+        r = db.get(Refund, rid, with_for_update=True, populate_existing=True)
         r.state, r.provider_refund_id = state, ref
-        op = db.get(PaymentOperation, r.operation_id)
         _tx(db, op.id, "refund", "ok" if state != "reconciling" else "timeout", request_id=req_hdr, ref=ref, status=state)
         _event(db, op, "done" if state == "completed" else "warning", f"Refund {state}: {cur} {fmt(amt)}", f"Provider refund {ref or 'pending lookup'} against capture {cap_id}.", actor=actor.label, tool="paypal.captures.refund")
         return op_json(op, db)

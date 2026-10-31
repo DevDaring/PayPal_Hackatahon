@@ -34,7 +34,7 @@ def claim(db: Session, worker_id: str) -> Job | None:
         .where(Job.status == "queued", Job.run_after <= timeutil.now())
         .order_by(Job.run_after)
         .limit(1)
-        .with_for_update(skip_locked=True)
+        .with_for_update(skip_locked=True).execution_options(populate_existing=True)
     ).scalar_one_or_none()
     if job is None:
         return None

@@ -62,7 +62,7 @@ export function CompareStep({ req, cmp, onOpen }: { req: RequestDetail; cmp: Com
 
   const cols: ColDef<Row>[] = useMemo(() => [
     {
-      headerName: "Supplier", field: "supplier", pinned: "left", minWidth: 210, flex: 1.4,
+      headerName: "Supplier", field: "supplier", pinned: "left", minWidth: 190, flex: 1.3,
       cellRenderer: (p: ICellRendererParams<Row>) => (
         <div className="flex h-full items-center gap-2">
           {p.data!.rec ? <Award className="size-4 shrink-0 text-teal" aria-label="Recommended" /> : <span className="size-4" />}
@@ -70,38 +70,38 @@ export function CompareStep({ req, cmp, onOpen }: { req: RequestDetail; cmp: Com
         </div>
       ),
     },
-    { headerName: "Mandatory checks", minWidth: 150, cellRenderer: (p: ICellRendererParams<Row>) => <div className="flex h-full items-center"><CheckBadge status={p.data!.outcome.mandatory_status} label={{ pass: "All pass", fail: "Fails", unknown: "Unknown" }[p.data!.outcome.mandatory_status]} /></div> },
+    { headerName: "Checks", minWidth: 112, cellRenderer: (p: ICellRendererParams<Row>) => <div className="flex h-full items-center"><CheckBadge status={p.data!.outcome.mandatory_status} label={{ pass: "All pass", fail: "Fails", unknown: "Unknown" }[p.data!.outcome.mandatory_status]} /></div> },
     {
-      headerName: "Verified total", minWidth: 140, comparator: (a, b) => Number(a ?? 1e9) - Number(b ?? 1e9), valueGetter: (p) => p.data!.outcome.verified_total,
+      headerName: "Verified total", minWidth: 128, comparator: (a, b) => Number(a ?? 1e9) - Number(b ?? 1e9), valueGetter: (p) => p.data!.outcome.verified_total,
       cellRenderer: (p: ICellRendererParams<Row>) => <ValueCell q={p.data!} field="total" value={money(p.data!.outcome.verified_total, p.data!.version.currency)} status={checkFor(p.data!, "budget")?.status} sub={p.data!.outcome.verified_total ? (checkFor(p.data!, "budget")?.status === "fail" ? "over budget" : "within budget") : p.data!.version.stated_total ? `stated ${money(p.data!.version.stated_total, p.data!.version.currency)} · unverified` : "cannot verify"} />,
     },
-    { headerName: "Items", minWidth: 110, cellRenderer: (p: ICellRendererParams<Row>) => <ValueCell q={p.data!} field="subtotal" value={money(p.data!.version.subtotal, p.data!.version.currency)} /> },
+    { headerName: "Items", minWidth: 96, cellRenderer: (p: ICellRendererParams<Row>) => <ValueCell q={p.data!} field="subtotal" value={money(p.data!.version.subtotal, p.data!.version.currency)} /> },
     {
-      headerName: "Shipping", minWidth: 120,
+      headerName: "Shipping", minWidth: 118,
       cellRenderer: (p: ICellRendererParams<Row>) => {
         const v = p.data!.version;
         const pushesOver = checkFor(p.data!, "budget")?.status === "fail" && v.shipping != null && v.computed_total != null && spec && Number(v.computed_total) - Number(v.shipping) <= Number(spec.budget_amount);
         return <ValueCell q={p.data!} field="shipping" value={money(v.shipping, v.currency)} status={pushesOver ? "fail" : undefined} sub={pushesOver ? "pushes total over budget" : null} />;
       },
     },
-    { headerName: "Tax", minWidth: 95, cellRenderer: (p: ICellRendererParams<Row>) => <ValueCell q={p.data!} field="tax" value={money(p.data!.version.tax, p.data!.version.currency)} /> },
-    { headerName: "Delivery (claim)", minWidth: 140, cellRenderer: (p: ICellRendererParams<Row>) => <ValueCell q={p.data!} field="delivery_days" value={p.data!.version.delivery_days != null ? `${p.data!.version.delivery_days} days` : null} status={checkFor(p.data!, "delivery")?.status} sub={p.data!.outcome.estimated_delivery ? `≈ ${dateOnly(p.data!.outcome.estimated_delivery)}` : null} /> },
+    { headerName: "Tax", minWidth: 80, cellRenderer: (p: ICellRendererParams<Row>) => <ValueCell q={p.data!} field="tax" value={money(p.data!.version.tax, p.data!.version.currency)} /> },
+    { headerName: "Delivery (claim)", minWidth: 124, cellRenderer: (p: ICellRendererParams<Row>) => <ValueCell q={p.data!} field="delivery_days" value={p.data!.version.delivery_days != null ? `${p.data!.version.delivery_days} days` : null} status={checkFor(p.data!, "delivery")?.status} sub={p.data!.outcome.estimated_delivery ? `≈ ${dateOnly(p.data!.outcome.estimated_delivery)}` : null} /> },
     ...((spec?.mandatory ?? []).map((c) => ({
-      headerName: c.key === "connector" ? "Connector" : c.label, minWidth: 120,
+      headerName: c.key === "connector" ? "Connector" : c.key === "microphone" ? "Mic" : c.label, minWidth: 100,
       cellRenderer: (p: ICellRendererParams<Row>) => <ValueCell q={p.data!} field={`attr:${c.key}`} value={p.data!.version.attributes[c.key] ?? null} status={checkFor(p.data!, `attr:${c.key}`)?.status} />,
     })) as ColDef<Row>[]),
-    { headerName: "Valid until", minWidth: 120, cellRenderer: (p: ICellRendererParams<Row>) => <ValueCell q={p.data!} field="valid_until" value={p.data!.version.valid_until ? dateOnly(p.data!.version.valid_until) : null} status={checkFor(p.data!, "validity")?.status} /> },
+    { headerName: "Valid until", minWidth: 108, cellRenderer: (p: ICellRendererParams<Row>) => <ValueCell q={p.data!} field="valid_until" value={p.data!.version.valid_until ? dateOnly(p.data!.version.valid_until) : null} status={checkFor(p.data!, "validity")?.status} /> },
     {
-      headerName: "PayPal checkout", minWidth: 165,
+      headerName: "Checkout", minWidth: 132,
       cellRenderer: (p: ICellRendererParams<Row>) => (
         <div className="flex h-full items-center" title={p.data!.checkout_reason}>
-          {p.data!.outcome.checkout_available ? <Badge tone="good" icon={<CreditCard className="size-3" aria-hidden />}>{p.data!.merchant?.adapter === "sandbox" ? "Sandbox merchant" : "Simulated (lab)"}</Badge> : <Badge tone="neutral">Not configured</Badge>}
+          {p.data!.outcome.checkout_available ? <Badge tone="good" icon={<CreditCard className="size-3" aria-hidden />}>{p.data!.merchant?.adapter === "sandbox" ? "PayPal Sandbox" : "Simulated (lab)"}</Badge> : <Badge tone="neutral">Not configured</Badge>}
         </div>
       ),
     },
   ], [spec]);
 
-  const fieldForCol: Record<string, string> = { "Verified total": "total", Items: "subtotal", Shipping: "shipping", Tax: "tax", "Delivery (claim)": "delivery_days", Connector: "attr:connector", "Built-in microphone": "attr:microphone", "Valid until": "valid_until", Supplier: "supplier_name" };
+  const fieldForCol: Record<string, string> = { "Verified total": "total", Items: "subtotal", Shipping: "shipping", Tax: "tax", "Delivery (claim)": "delivery_days", Connector: "attr:connector", Mic: "attr:microphone", "Valid until": "valid_until", Supplier: "supplier_name" };
 
   if (cmp.quotes.length === 0) return <Card><Empty title="No extracted quotes yet" body="Upload or load sample quotes on the previous step." /></Card>;
 
@@ -135,7 +135,7 @@ export function CompareStep({ req, cmp, onOpen }: { req: RequestDetail; cmp: Com
         <SectionTitle hint="Deterministic policy · lowest verified total, then fastest delivery · click a cell for its source" right={<Badge tone="neutral" icon={<Scale className="size-3" aria-hidden />}>policy v{cmp.policy.version}</Badge>}>Comparison grid</SectionTitle>
         <div className="overflow-hidden rounded-2xl border border-line shadow-[var(--shadow-card)]">
           <AgGridReact<Row> theme={gridTheme} rowData={rows} columnDefs={cols} domLayout="autoHeight" suppressCellFocus={false} ensureDomOrder
-            defaultColDef={{ sortable: false, resizable: true, suppressMovable: true }}
+            defaultColDef={{ sortable: false, resizable: true, suppressMovable: true, flex: 1 }}
             getRowStyle={(p) => (p.data?.rec ? { background: "#f2faf8" } : undefined)}
             onCellClicked={(e) => { const f = fieldForCol[e.colDef.headerName ?? ""]; if (f && e.data) onOpen(openFieldTarget(e.data, f)); }}
             onCellKeyDown={(e: any) => { if (e.event?.key === "Enter") { const f = fieldForCol[e.colDef.headerName ?? ""]; if (f && e.data) onOpen(openFieldTarget(e.data, f)); } }} />

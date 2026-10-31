@@ -36,7 +36,7 @@ class AnalysisState(TypedDict, total=False):
 def _mark(run_id: str, node: str, done: bool = False) -> bool:
     """Persist node progress; returns False when cancellation was requested."""
     with session_scope() as db:
-        run = db.get(WorkflowRun, uuid.UUID(run_id), with_for_update=True)
+        run = db.get(WorkflowRun, uuid.UUID(run_id), with_for_update=True, populate_existing=True)
         run.current_node = node
         if done and node not in run.completed_nodes:
             run.completed_nodes = [*run.completed_nodes, node]

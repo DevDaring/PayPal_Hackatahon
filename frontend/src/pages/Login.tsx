@@ -39,7 +39,7 @@ export function LoginPage() {
       <section className="relative hidden overflow-hidden bg-ink lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div className="pointer-events-none absolute -right-40 -top-40 size-[520px] rounded-full bg-teal-bright/10 blur-3xl" />
         <Logo light />
-        <div className="relative z-10 max-w-xl">
+        <div className="relative z-10 max-w-[440px] xl:max-w-[520px]">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[12px] text-white/80">
             <Sparkles className="size-3.5 text-teal-bright" aria-hidden /> Built for the PayPal AI Hackathon
           </div>
@@ -49,7 +49,7 @@ export function LoginPage() {
           <p className="mt-4 max-w-lg text-[16px] leading-relaxed text-white/70">
             Evidence for every decision. Approval bound to the exact purchase. Checks before money moves.
           </p>
-          <ul className="mt-8 grid gap-3 text-[14px] text-white/80">
+          <ul className="mt-8 grid max-w-[420px] gap-3 text-[14px] text-white/80">
             {[
               [FileSearch, "Every number links to the line on the supplier's PDF it came from"],
               [ShieldCheck, "Approval is hashed to the exact supplier, amount and payee"],
@@ -62,7 +62,7 @@ export function LoginPage() {
             ))}
           </ul>
         </div>
-        <img src="/illustrations/login-hero.webp" alt="" className="pointer-events-none absolute -bottom-16 right-[-60px] w-[420px] rotate-[-4deg] rounded-[28px] opacity-90 shadow-2xl" />
+        <img src="/illustrations/login-hero.webp" alt="" className="pointer-events-none absolute bottom-10 right-[-36px] hidden w-[300px] rotate-[-4deg] rounded-[28px] shadow-2xl xl:block 2xl:w-[360px]" />
         <p className="relative z-10 text-[12px] text-white/40">Synthetic demo data · PayPal Sandbox · no real money moves</p>
       </section>
 

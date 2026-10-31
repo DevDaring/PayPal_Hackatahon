@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import {
   BarChart3, ChevronDown, ClipboardList, CreditCard, FileSearch, FlaskConical, LayoutDashboard, LogOut, Menu, Plus, Settings, ShieldCheck, UserRoundCog, X,
 } from "lucide-react";
-import { api, errorText } from "../lib/api";
+import { api, errorText, post } from "../lib/api";
 import { useSession } from "../lib/session";
 import type { Me } from "../lib/types";
 import { Badge, cx } from "./ui";
@@ -88,7 +88,7 @@ function Sidebar({ me, onNavigate }: { me: Me; onNavigate?: () => void }) {
             ))}
             {me.principal.is_demo_account && (
               <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] text-teal-bright hover:bg-white/10"
-                onClick={async () => { setWsOpen(false); try { setMe(await api<Me>("/auth/new-demo-workspace")); nav("/"); toast.success("Fresh isolated demo workspace ready"); } catch (e) { toast.error(errorText(e)); } }}>
+                onClick={async () => { setWsOpen(false); try { setMe(await post<Me>("/auth/new-demo-workspace")); nav("/"); toast.success("Fresh isolated demo workspace ready"); } catch (e) { toast.error(errorText(e)); } }}>
                 <Plus className="size-3.5" aria-hidden /> New isolated demo workspace
               </button>
             )}
@@ -113,7 +113,7 @@ function Sidebar({ me, onNavigate }: { me: Me; onNavigate?: () => void }) {
             <div className="truncate text-[11px] text-white/55">{me.roles.join(" · ")}</div>
           </div>
           <button aria-label="Sign out" className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
-            onClick={async () => { await api("/auth/logout").catch(() => {}); setMe(null); nav("/login"); }}>
+            onClick={async () => { await post("/auth/logout").catch(() => {}); setMe(null); nav("/login"); }}>
             <LogOut className="size-4" />
           </button>
         </div>

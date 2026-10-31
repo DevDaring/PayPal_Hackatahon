@@ -15,7 +15,7 @@ export function Timeline({ events, compact }: { events: WfEvent[]; compact?: boo
       {events.map((e, i) => {
         const Icon = e.status === "blocked" ? XCircle : e.status === "started" ? Loader2 : STAGE_ICON[e.stage] ?? CircleDot;
         return (
-          <li key={e.id} className="relative flex gap-3 pb-4 animate-in">
+          <li key={e.id} className="relative flex gap-3 pb-4">
             {i < events.length - 1 && <span className="absolute left-[13px] top-7 h-[calc(100%-20px)] w-px bg-line-strong" aria-hidden />}
             <span className={cx("relative z-10 grid size-7 shrink-0 place-items-center rounded-full", STATUS_CLS[e.status] ?? STATUS_CLS.info)}>
               <Icon className={cx("size-3.5", e.status === "started" && "animate-spin")} aria-hidden />

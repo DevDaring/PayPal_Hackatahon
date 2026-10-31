@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, FileUp, FlaskConical, Loader2, MapPin, PackageOpen, ShieldAlert, XCircle } from "lucide-react";
-import { api, errorText } from "../lib/api";
+import { api, errorText, post } from "../lib/api";
 import { FIELD_LABEL, money } from "../lib/format";
 import { useRoles } from "../lib/session";
 import type { CompareQuote, Comparison, RequestDetail } from "../lib/types";
@@ -43,8 +43,8 @@ export function EvidenceStep({ req, cmp, onOpen }: { req: RequestDetail; cmp?: C
   const [drag, setDrag] = useState(false);
   const fixtures = useQuery({ queryKey: ["fixtures"], queryFn: () => api("/demo/fixtures"), staleTime: Infinity });
   const refresh = () => { qc.invalidateQueries({ queryKey: ["request", req.id] }); qc.invalidateQueries({ queryKey: ["comparison", req.id] }); };
-  const samples = useMutation({ mutationFn: () => api(`/requests/${req.id}/sample-quotes`), onSuccess: () => { toast.success("Three labelled sample quotes uploaded — extracting now"); refresh(); }, onError: (e) => toast.error(errorText(e)) });
-  const fixture = useMutation({ mutationFn: (k: string) => api(`/requests/${req.id}/fixtures/${k}`), onSuccess: () => { toast.success("Edge-case fixture added"); refresh(); }, onError: (e) => toast.error(errorText(e)) });
+  const samples = useMutation({ mutationFn: () => post(`/requests/${req.id}/sample-quotes`), onSuccess: () => { toast.success("Three labelled sample quotes uploaded — extracting now"); refresh(); }, onError: (e) => toast.error(errorText(e)) });
+  const fixture = useMutation({ mutationFn: (k: string) => post(`/requests/${req.id}/fixtures/${k}`), onSuccess: () => { toast.success("Edge-case fixture added"); refresh(); }, onError: (e) => toast.error(errorText(e)) });
   const upload = useMutation({
     mutationFn: async (files: File[]) => { for (const f of files) { const fd = new FormData(); fd.append("file", f); await api(`/requests/${req.id}/documents`, { form: fd }); } },
     onSuccess: () => { toast.success("Uploaded — extraction started"); refresh(); },

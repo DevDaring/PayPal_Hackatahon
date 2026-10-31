@@ -103,7 +103,7 @@ class Settings(BaseSettings):
     @field_validator("PAYPAL_MODE", mode="before")
     @classmethod
     def _sandbox_only(cls, v: str) -> str:
-        if str(v).lower() != "sandbox":
+        if str(getattr(v, "value", v)).lower() != "sandbox":
             raise ValueError("PAYPAL_MODE must be 'sandbox'; live mode is disabled in this deliverable")
         return "sandbox"
 

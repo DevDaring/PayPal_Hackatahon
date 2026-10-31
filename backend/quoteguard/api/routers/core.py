@@ -550,7 +550,7 @@ def arm_fault(op_id: str, ctx: Ctx = Depends(require_ctx), db: Session = Depends
     ctx.actor.require("admin")
     if not ctx.actor.is_demo_workspace or not get_settings().DEMO_LAB_ENABLED:
         raise AppError("DEMO_LAB_DISABLED", "Fault injection is only available in demo workspaces.", 403)
-    op = db.execute(select(PaymentOperation).where(PaymentOperation.id == _op(db, ctx, op_id).id).with_for_update()).scalar_one()
+    op = db.execute(select(PaymentOperation).where(PaymentOperation.id == _op(db, ctx, op_id).id).with_for_update().execution_options(populate_existing=True)).scalar_one()
     if op.state != "awaiting_payer":
         raise AppError("INVALID_STATE", "Arm the test before capture.", 409)
     op.fault_injection = "drop_capture_response"

@@ -27,8 +27,12 @@ def to_money(value) -> Decimal | None:
     return d.quantize(CENT, rounding=ROUND_HALF_UP)
 
 
-def fmt(d: Decimal | None) -> str | None:
-    return None if d is None else str(d.quantize(CENT, rounding=ROUND_HALF_UP))
+def fmt(d: Decimal | int | None) -> str | None:
+    if d is None:
+        return None
+    if isinstance(d, float):
+        raise TypeError("floating point money is not accepted")
+    return str(Decimal(d).quantize(CENT, rounding=ROUND_HALF_UP))
 
 
 def to_minor_units(d: Decimal) -> int:

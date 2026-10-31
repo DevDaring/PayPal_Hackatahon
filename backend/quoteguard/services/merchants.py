@@ -28,7 +28,7 @@ def change_merchant(db: Session, actor: Actor, binding_id, merchant_id: str, not
     merchant_id = (merchant_id or "").strip()
     if not (3 <= len(merchant_id) <= 64) or not merchant_id.replace("-", "").isalnum():
         raise AppError("INVALID_VALUE", "Merchant IDs are 3–64 letters, digits or dashes.", 422)
-    b = db.execute(select(MerchantBinding).where(MerchantBinding.id == parse_uuid(binding_id, "Merchant binding"), MerchantBinding.workspace_id == actor.workspace_id).with_for_update()).scalar_one_or_none()
+    b = db.execute(select(MerchantBinding).where(MerchantBinding.id == parse_uuid(binding_id, "Merchant binding"), MerchantBinding.workspace_id == actor.workspace_id).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none()
     if b is None:
         raise not_found("Merchant binding")
     old = b.merchant_id

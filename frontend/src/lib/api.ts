@@ -50,3 +50,6 @@ export async function api<T = any>(path: string, init: { method?: string; body?:
 }
 
 export const errorText = (e: unknown) => (e instanceof ApiError ? e.message : (e as Error)?.message ?? "Something went wrong");
+
+/** Mutation without a body still needs POST (and therefore the CSRF header). */
+export const post = <T = any>(path: string, body?: unknown) => api<T>(path, { method: "POST", body });

@@ -54,7 +54,7 @@ def _related_order_and_capture(event: dict) -> tuple[str | None, str | None]:
 def process(db_factory, webhook_event_id: str) -> None:
     s = get_settings()
     with db_factory() as db:
-        we = db.get(WebhookEvent, uuid.UUID(webhook_event_id), with_for_update=True)
+        we = db.get(WebhookEvent, uuid.UUID(webhook_event_id), with_for_update=True, populate_existing=True)
         if we is None or we.processing in ("applied", "ignored"):
             return
         we.attempts += 1

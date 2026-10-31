@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, FileSearch, Fingerprint, Hourglass, Play, Plus, RefreshCcw, ShieldCheck, Wallet } from "lucide-react";
-import { api, errorText } from "../lib/api";
+import { api, errorText, post } from "../lib/api";
 import { money, PAYMENT_STATUS, relative, REQUEST_STATUS } from "../lib/format";
 import { useSession } from "../lib/session";
 import { Badge, Button, Card, Empty, ErrorBox, PageHeader, SectionTitle, Skeleton, Stat } from "../components/ui";
@@ -21,7 +21,7 @@ export default function Overview() {
   const nav = useNavigate();
   const q = useQuery({ queryKey: ["overview"], queryFn: () => api("/overview"), refetchInterval: 8000 });
   const sample = useMutation({
-    mutationFn: () => api("/demo/sample-request"),
+    mutationFn: () => post("/demo/sample-request"),
     onSuccess: (r: any) => { toast.success("Sample request drafted — review the parsed requirements"); nav(`/requests/${r.id}/requirements`); },
     onError: (e) => toast.error(errorText(e)),
   });
@@ -37,16 +37,16 @@ export default function Overview() {
         <div className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-teal-bright/15 blur-3xl" />
         <div className="grid gap-6 p-6 md:grid-cols-[1.2fr_1fr] md:p-8">
           <div className="relative z-10">
-            <Badge tone="info" className="!border-white/20 !bg-white/10 !text-white">Guided demo · about 2 minutes</Badge>
+            <Badge tone="info" className="border-white/20! bg-white/10! text-white!">Guided demo · about 2 minutes</Badge>
             <h2 className="mt-3 font-display text-[34px] leading-tight md:text-[40px]">Try the sample purchase</h2>
             <p className="mt-2 max-w-md text-[15px] text-white/70">
               30 USB-C headsets, $600 budget, delivery in 7 days. Three synthetic supplier quotes — the cheapest one hides a wrong connector, another hides $160 of shipping.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <Button size="lg" className="!bg-teal-bright !text-navy-900 hover:!bg-white" loading={sample.isPending} icon={<Play className="size-4" aria-hidden />} onClick={() => sample.mutate()}>
+              <Button size="lg" className="bg-teal-bright! text-navy-900! hover:bg-white!" loading={sample.isPending} icon={<Play className="size-4" aria-hidden />} onClick={() => sample.mutate()}>
                 Try sample purchase
               </Button>
-              <Link to="/demo-lab"><Button size="lg" variant="ghost" className="!text-white hover:!bg-white/10">Open Demo Lab <ArrowRight className="size-4" aria-hidden /></Button></Link>
+              <Link to="/demo-lab"><Button size="lg" variant="ghost" className="text-white! hover:bg-white/10!">Open Demo Lab <ArrowRight className="size-4" aria-hidden /></Button></Link>
             </div>
           </div>
           <ol className="relative z-10 grid grid-cols-2 gap-2 self-center sm:grid-cols-3">

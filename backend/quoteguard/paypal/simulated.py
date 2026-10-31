@@ -52,7 +52,7 @@ class SimulatedPayPal(PaymentProvider):
     def approve(self, order_id: str) -> None:
         """Stands in for buyer approval in the PayPal UI. Only reachable from labelled flows."""
         with session_scope() as db:
-            o = db.get(SimulatedProviderOrder, order_id, with_for_update=True)
+            o = db.get(SimulatedProviderOrder, order_id, with_for_update=True, populate_existing=True)
             if o and o.status == "CREATED":
                 o.status = "APPROVED"
 
@@ -65,7 +65,7 @@ class SimulatedPayPal(PaymentProvider):
 
     def capture_order(self, order_id: str, request_id: str) -> ProviderResult:
         with session_scope() as db:
-            o = db.get(SimulatedProviderOrder, order_id, with_for_update=True)
+            o = db.get(SimulatedProviderOrder, order_id, with_for_update=True, populate_existing=True)
             if o is None:
                 raise ProviderError("RESOURCE_NOT_FOUND", "Order not found", 404)
             if o.capture_request_id == request_id and o.status == "COMPLETED":
@@ -90,7 +90,7 @@ class SimulatedPayPal(PaymentProvider):
 
     def refund_capture(self, capture_id: str, amount: str, currency: str, request_id: str, note: str) -> ProviderResult:
         with session_scope() as db:
-            o = db.execute(select(SimulatedProviderOrder).where(SimulatedProviderOrder.capture_id == capture_id).with_for_update()).scalar_one_or_none()
+            o = db.execute(select(SimulatedProviderOrder).where(SimulatedProviderOrder.capture_id == capture_id).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none()
             if o is None:
                 raise ProviderError("RESOURCE_NOT_FOUND", "Capture not found", 404)
             for r in o.refunds:

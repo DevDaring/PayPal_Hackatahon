@@ -61,11 +61,13 @@ export default function RequestWorkspace() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const [target, setTarget] = useState<EvidenceTarget | null>(null);
+  const [activity, setActivity] = useState<boolean | null>(null);
   const req = useQuery<RequestDetail>({
     queryKey: ["request", id], queryFn: () => api(`/requests/${id}`),
     refetchInterval: (q) => (q.state.data && (q.state.data.status === "analyzing" || q.state.data.documents.some((d) => ["uploaded", "extracting"].includes(d.status))) ? 2500 : 15000),
   });
-  const cmp = useQuery<Comparison>({ queryKey: ["comparison", id, req.data?.updated_at, req.data?.documents.map((d) => d.status).join()], queryFn: () => api(`/requests/${id}/comparison`), enabled: !!req.data?.versions.length });
+  const cmp = useQuery<Comparison>({ queryKey: ["comparison", id, req.data?.updated_at, req.data?.documents.map((d) => d.status).join()], queryFn: () => api(`/requests/${id}/comparison`), enabled: !!req.data?.versions.length,
+    refetchInterval: (q) => (q.state.data && q.state.data.quotes.length > 0 && !q.state.data.explanation ? 2500 : false) });
   const events = useLiveEvents(id, () => { qc.invalidateQueries({ queryKey: ["request", id] }); });
   const r = req.data;
   const current = step ?? (r ? defaultStep(r) : "requirements");
@@ -87,6 +89,7 @@ export default function RequestWorkspace() {
   if (req.error) return <ErrorBox error={req.error} onRetry={() => req.refetch()} />;
   if (!r) return <div className="grid gap-4"><Skeleton className="h-16" /><Skeleton className="h-12" /><Skeleton className="h-96" /></div>;
   const idx = STEPS.findIndex((s) => s.key === current);
+  const showActivity = activity ?? (current === "requirements" || current === "evidence");
 
   return (
     <div className="pb-16">
@@ -102,6 +105,9 @@ export default function RequestWorkspace() {
           <h1 className="mt-1.5 font-display text-[32px] leading-tight text-ink md:text-[38px]">{r.title}</h1>
           {r.budget && <p className="text-sm text-muted">{r.quantity} units · budget {money(r.budget, r.currency)} · deliver by {r.deadline}</p>}
         </div>
+        <button onClick={() => setActivity(!showActivity)} aria-pressed={showActivity} className="hidden items-center gap-2 self-start rounded-xl border border-line-strong bg-surface px-3 py-2 text-[13px] font-medium text-ink-2 hover:bg-sunken md:inline-flex">
+          <Activity className="size-4 text-teal" aria-hidden />{showActivity ? "Hide" : "Show"} live activity{r.workflow?.status === "running" && <span className="size-2 rounded-full bg-teal-bright pulse-ring" aria-label="running" />}
+        </button>
       </div>
 
       <nav aria-label="Purchase journey" className="mb-6 overflow-x-auto">
@@ -125,7 +131,7 @@ export default function RequestWorkspace() {
         </ol>
       </nav>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
+      <div className={cx("grid gap-6", showActivity && "xl:grid-cols-[1fr_300px]")}>
         <div className="min-w-0 animate-in" key={current}>
           {current === "requirements" && <RequirementsStep req={r} onConfirmed={() => nav(`/requests/${id}/evidence`)} />}
           {current === "evidence" && <EvidenceStep req={r} cmp={cmp.data} onOpen={setTarget} />}
@@ -134,7 +140,7 @@ export default function RequestWorkspace() {
           {current === "pay" && (live ? <CheckoutPanel requestId={id} approval={live} op={op?.approval_id === live.id ? op : null} /> : completed ? <Callout tone="good" title="Paid">This request's payment is complete — see the receipt.</Callout> : <Callout tone="warn" title="An active organisation approval is required">Approve the exact purchase first. If an earlier approval was invalidated, a fresh one is required.</Callout>)}
           {current === "receipt" && (completed ? <Receipt requestId={id} opId={completed.id} /> : <Callout tone="info">No confirmed payment yet.</Callout>)}
         </div>
-        <aside className="hidden xl:block">
+        <aside className={showActivity ? "hidden xl:block" : "hidden"}>
           <Card className="sticky top-6 max-h-[calc(100vh-48px)] overflow-y-auto p-4">
             <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-ink"><Activity className="size-4 text-teal" aria-hidden />Live activity {r.workflow?.status === "running" && <span className="size-2 rounded-full bg-teal-bright pulse-ring" aria-label="running" />}</div>
             <Timeline events={[...events].reverse().slice(0, 30)} compact />

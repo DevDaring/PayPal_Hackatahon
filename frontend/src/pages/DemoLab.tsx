@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Archive, Ban, Check, CircleAlert, CopyCheck, FileWarning, FlaskConical, Info, Loader2, Play, Shuffle, TimerOff, X } from "lucide-react";
-import { api, errorText } from "../lib/api";
+import { api, errorText, post } from "../lib/api";
 import { dateTime } from "../lib/format";
 import { Badge, Button, Callout, Card, cx, PageHeader, Skeleton } from "../components/ui";
 
@@ -21,8 +21,8 @@ const VERDICT: Record<string, { label: string; tone: "good" | "bad" | "warn" }> 
 export default function DemoLab() {
   const qc = useQueryClient();
   const q = useQuery<any>({ queryKey: ["demo-lab"], queryFn: () => api("/demo/scenarios"), refetchInterval: (x) => (x.state.data?.runs?.some((r: any) => r.status === "running") ? 1500 : 10000) });
-  const run = useMutation({ mutationFn: (k: string) => api(`/demo/scenarios/${k}`), onSuccess: () => { toast.message("Controlled test started"); qc.invalidateQueries({ queryKey: ["demo-lab"] }); }, onError: (e) => toast.error(errorText(e)) });
-  const archive = useMutation({ mutationFn: () => api("/demo/archive"), onSuccess: (r: any) => { toast.success(`Archived ${r.archived_requests} request(s). Payment history preserved.`); qc.invalidateQueries(); }, onError: (e) => toast.error(errorText(e)) });
+  const run = useMutation({ mutationFn: (k: string) => post(`/demo/scenarios/${k}`), onSuccess: () => { toast.message("Controlled test started"); qc.invalidateQueries({ queryKey: ["demo-lab"] }); }, onError: (e) => toast.error(errorText(e)) });
+  const archive = useMutation({ mutationFn: () => post("/demo/archive"), onSuccess: (r: any) => { toast.success(`Archived ${r.archived_requests} request(s). Payment history preserved.`); qc.invalidateQueries(); }, onError: (e) => toast.error(errorText(e)) });
   const latest = (k: string) => q.data?.runs?.find((r: any) => r.scenario === k);
   return (
     <div>
