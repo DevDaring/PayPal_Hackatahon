@@ -50,6 +50,8 @@ def value_supported(value, snippet: str) -> bool:
     if value is None or snippet is None:
         return False
     s = str(value)
+    if re.fullmatch(r"0+(\.0+)?", s.strip()) and re.search(r"\b(free|included|waived|no charge|complimentary)\b", snippet, re.I):
+        return True
     digits = re.sub(r"[^0-9.]", "", s)
     if not digits:
         return True

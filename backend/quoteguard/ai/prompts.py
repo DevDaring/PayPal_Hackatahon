@@ -1,7 +1,7 @@
 """Versioned prompts. Changing a prompt bumps its version, which invalidates extraction cache entries."""
 
 REQUIREMENTS_PROMPT_VERSION = "req-v2"
-EXTRACTION_PROMPT_VERSION = "extract-v3"
+EXTRACTION_PROMPT_VERSION = "extract-v4"
 EXPLAIN_PROMPT_VERSION = "explain-v2"
 CHAT_PROMPT_VERSION = "chat-v1"
 SCHEMA_VERSION = "extraction-schema-v1"

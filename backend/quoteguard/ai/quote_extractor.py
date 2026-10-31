@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 
 from pydantic import ValidationError
 
@@ -11,6 +12,7 @@ from ..config import get_settings
 from ..documents import rules_extractor
 from ..documents.evidence import snippet_on_page, value_supported
 from ..documents.schema import MONEY_FIELDS, Cited, Extraction
+from .requirements_parser import words_to_int
 from .prompts import EXTRACTION_PROMPT_VERSION, EXTRACTION_SYSTEM, SCHEMA_VERSION
 from .provider import AIUnavailable, chat_json
 
@@ -66,9 +68,26 @@ def verify(ex: Extraction, pages: list[dict]) -> list[str]:
             issues.append(f"{name}: evidence not found on the cited page; value withheld for review.")
             c.value, c.source_text = None, None
             continue
+        if name == "delivery_days":
+            # Normalise day counts deterministically from the cited text (business → calendar days).
+            m = re.search(r"within\s+(\d+|[a-z]+)\s+(calendar\s+|business\s+|working\s+)?days?", c.source_text, re.I)
+            if m:
+                n = int(m.group(1)) if m.group(1).isdigit() else words_to_int(m.group(1))
+                if n is not None:
+                    business = bool(m.group(2)) and m.group(2).strip().lower() in ("business", "working")
+                    c.value = n + (n // 5) * 2 + (2 if n % 5 else 0) if business else n
+                    if business:
+                        issues.append("Delivery is stated in business days; converted conservatively to calendar days.")
+                    continue
         if name in MONEY_FIELDS + ("quantity", "delivery_days") and not value_supported(c.value, c.source_text):
             issues.append(f"{name}: value {c.value} does not appear in its cited text; withheld for review.")
             c.value = None
+    # The model's claim that a currency is "explicit" is checked against the document itself.
+    code = str(ex.currency.value or "").upper()
+    full = "\n".join(by_page.values())
+    if ex.currency_explicit and not (len(code) == 3 and re.search(rf"\b{code}\b", full)):
+        ex.currency_explicit = False
+        issues.append(f"Currency note: no ISO code '{code or '?'}' is printed in the document; treated as inferred.")
     return issues
 
 
@@ -89,6 +108,15 @@ def extract(pages: list[dict], attribute_keys: list[str], *, workspace_id=None, 
     except ValidationError as e:
         return rules, {"method": "rules", "model": meta["model"], "prompt_version": EXTRACTION_PROMPT_VERSION, "issues": [f"Model output failed schema validation ({e.error_count()} errors); deterministic extractor used."]}
     issues = verify(ex, pages)
+    # Grounded fallback: a critical value the model left empty, but the deterministic parser cited, is adopted and noted.
+    by_page = {p["page_number"]: p.get("text") or "" for p in pages}
+    for f in ("quantity", "subtotal", "shipping", "tax", "total", "delivery_days", "valid_until", "currency"):
+        mine, theirs = getattr(ex, f), getattr(rules, f)
+        if mine.value is None and theirs.value is not None and theirs.page in by_page and snippet_on_page(theirs.source_text or "", by_page[theirs.page]):
+            setattr(ex, f, theirs)
+            if f == "currency":
+                ex.currency_explicit = rules.currency_explicit
+            issues.append(f"Note: model returned no {f.replace('_', ' ')}; deterministic parser value used (cited on page {theirs.page}).")
     # Independent cross-check of critical amounts against the deterministic parser.
     for f in ("subtotal", "shipping", "tax", "total", "quantity"):
         a, b = getattr(ex, f).value, getattr(rules, f).value
