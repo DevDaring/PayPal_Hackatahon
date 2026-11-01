@@ -22,7 +22,7 @@ Legend: ✅ implemented and verified · 🟡 implemented, verification needs a c
 | Signed webhook handling (store → verify → dedupe → lookup) | ✅ | test 13; webhook subscription registered for the live app (1 Nov 2026) |
 | Comparison, approval, checkout and receipt screens | ✅ | e2e screenshots |
 | Three reproducible sample quotations + extra fixtures | ✅ | `fixtures/` |
-| Tests for payment and authorization boundaries | ✅ | 33 backend tests |
+| Tests for payment and authorization boundaries | ✅ | 34 backend tests |
 
 ## P1 — differentiators
 
