@@ -16,19 +16,29 @@ export default function Evaluation() {
   const qc = useQueryClient();
   const { isAdmin } = useRoles();
   const runs = useQuery<any>({ queryKey: ["eval-runs"], queryFn: () => api("/evaluation/runs"), refetchInterval: (q) => (q.state.data?.items?.some((r: any) => r.status === "running") ? 3000 : false) });
+  const [dataset, setDataset] = useState("quoteguard-holdout-v1");
   const [sel, setSel] = useState<string | null>(null);
-  const runId = sel ?? runs.data?.items?.find((r: any) => r.status === "finished")?.id;
+  const dsRuns = (runs.data?.items ?? []).filter((r: any) => r.dataset_version === dataset);
+  const runId = sel && dsRuns.some((r: any) => r.id === sel) ? sel : dsRuns.find((r: any) => r.status === "finished" && r.extraction_mode === "llm")?.id ?? dsRuns.find((r: any) => r.status === "finished")?.id;
   const detail = useQuery<any>({ queryKey: ["eval-run", runId], queryFn: () => api(`/evaluation/runs/${runId}`), enabled: !!runId });
-  const start = useMutation({ mutationFn: (mode: string) => api("/evaluation/runs", { body: { mode } }), onSuccess: () => { toast.message("Evaluation started"); qc.invalidateQueries({ queryKey: ["eval-runs"] }); }, onError: (e) => toast.error(errorText(e)) });
+  const start = useMutation({ mutationFn: (mode: string) => api("/evaluation/runs", { body: { mode, dataset } }), onSuccess: () => { toast.message("Evaluation started"); qc.invalidateQueries({ queryKey: ["eval-runs"] }); }, onError: (e) => toast.error(errorText(e)) });
   const d = detail.data;
   const s = d?.summary;
   return (
     <div>
-      <PageHeader eyebrow="Evaluation" title="Measured, not claimed" subtitle="A labelled set of synthetic quotations — clean, ambiguous, malformed and adversarial. Expected labels live in a separate manifest the model never sees."
+      <PageHeader eyebrow="Evaluation" title="Measured, not claimed" subtitle="Labelled synthetic quotations. Expected labels live in a separate manifest the model never sees; every run is kept, including the bad ones."
         actions={isAdmin ? <><Button variant="secondary" loading={start.isPending && start.variables === "rules"} onClick={() => start.mutate("rules")}>Run deterministic baseline</Button><Button loading={start.isPending && start.variables === "llm"} onClick={() => start.mutate("llm")} icon={<Play className="size-4" aria-hidden />}>Run with AI model</Button></> : undefined} />
-      {runs.data?.items?.length ? (
+      <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Dataset">
+        {[["quoteguard-holdout-v1", "Holdout · unfamiliar layouts (26)", "Built independently; labels frozen before any run"], ["quoteguard-eval-v1", "Development set (24)", "Template family the parser was written against"]].map(([k, l, h]) => (
+          <button key={k} role="tab" aria-selected={dataset === k} onClick={() => { setDataset(k); setSel(null); }} className={cx("rounded-xl border px-4 py-2 text-left", dataset === k ? "border-ink bg-ink text-white" : "border-line-strong bg-surface hover:bg-sunken")}>
+            <div className="text-[13.5px] font-semibold">{l}</div><div className={cx("text-[11.5px]", dataset === k ? "text-white/65" : "text-muted")}>{h}</div>
+          </button>
+        ))}
+      </div>
+      <RulesVsAi runs={dsRuns} />
+      {dsRuns.length ? (
         <div className="mb-5 flex flex-wrap gap-2">
-          {runs.data.items.map((r: any) => (
+          {dsRuns.map((r: any) => (
             <button key={r.id} onClick={() => setSel(r.id)} className={cx("rounded-xl border px-3 py-2 text-left text-[12.5px]", r.id === runId ? "border-ink bg-ink text-white" : "border-line-strong bg-surface hover:bg-sunken")}>
               <div className="font-semibold">{r.extraction_mode === "llm" ? r.model : "deterministic rules"}</div>
               <div className="opacity-70">{r.status === "running" ? "running…" : dateTime(r.finished_at)}</div>
@@ -117,5 +127,45 @@ function CaseGrid({ cases, runId }: { cases: any[]; runId: string }) {
         defaultColDef={{ sortable: true, resizable: true, flex: 1, floatingFilter: true, filter: true }}
         getRowStyle={(p) => (p.data && !p.data.agree ? { background: "#fdf1d8" } : undefined)} />
     </div>
+  );
+}
+
+/** Same inputs, same labels: deterministic parser vs every AI run (none hidden). */
+function RulesVsAi({ runs }: { runs: any[] }) {
+  const done = runs.filter((r) => r.status === "finished" && r.summary);
+  const rules = done.find((r) => r.extraction_mode === "rules");
+  const ai = done.filter((r) => r.extraction_mode === "llm");
+  if (!rules || !ai.length) return null;
+  const row = (label: string, f: (s: any) => string, better?: "high" | "low", num?: (s: any) => number) => {
+    const vals = ai.map((r) => (num ? num(r.summary) : 0));
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const rv = num ? num(rules.summary) : 0;
+    const win = better && num ? (better === "high" ? mean > rv : mean < rv) : false;
+    return (
+      <tr key={label} className="border-t border-line">
+        <td className="py-2 pr-3 text-[13px] text-ink-2">{label}</td>
+        <td className="py-2 pr-3 text-[13px] tnum">{f(rules.summary)}</td>
+        {ai.map((r) => <td key={r.id} className={cx("py-2 pr-3 text-[13px] tnum", win && "font-semibold text-teal-strong")}>{f(r.summary)}</td>)}
+      </tr>
+    );
+  };
+  const frac = (o: any) => `${o.agree ?? o.correct ?? o.blocked ?? o.count ?? o.needs_review}/${o.total ?? o.checked}`;
+  return (
+    <Card className="mb-5 overflow-x-auto p-5">
+      <SectionTitle hint="Same PDFs and frozen labels for every column. Green = AI average better than the deterministic parser. “Unseen” runs happened before any code change prompted by this dataset.">Rules vs AI on these documents</SectionTitle>
+      <table className="w-full min-w-[560px]">
+        <thead><tr className="text-left text-[11.5px] uppercase tracking-wider text-muted"><th className="pb-2 font-medium">Measure</th><th className="pb-2 font-medium">Rules parser</th>{ai.map((r, i) => <th key={r.id} className="pb-2 font-medium">AI run {i + 1}<div className="normal-case tracking-normal">{r.dataset_version.includes("holdout") ? (r.config?.holdout_status ? <Badge tone="warn">seen · after fixes</Badge> : <Badge tone="good">unseen</Badge>) : null}</div></th>)}</tr></thead>
+        <tbody>
+          {row("Decisions matching labels", (s) => frac(s.decision_agreement), "high", (s) => s.decision_agreement.agree)}
+          {row("False eligibility (non-payable marked payable)", (s) => `${s.false_eligibility?.count ?? s.unsafe_payment_attempts.total - s.unsafe_payment_attempts.blocked}/${s.unsafe_payment_attempts.total}`, "low", (s) => s.false_eligibility?.count ?? s.unsafe_payment_attempts.total - s.unsafe_payment_attempts.blocked)}
+          {row("False blocks (payable marked not payable)", (s) => frac(s.false_blocking), "low", (s) => s.false_blocking.blocked)}
+          {row("Cases needing human review", (s) => (s.review_burden ? frac(s.review_burden) : "—"), "low", (s) => s.review_burden?.needs_review ?? 99)}
+          {row("Field accuracy (all fields)", (s) => { const v = Object.values(s.field_accuracy) as any[]; const c = v.reduce((a, x) => a + x.correct, 0), t = v.reduce((a, x) => a + x.total, 0); return `${c}/${t}`; }, "high", (s) => (Object.values(s.field_accuracy) as any[]).reduce((a, x) => a + x.correct, 0))}
+          {row("Cited lines found on cited page", (s) => frac(s.evidence))}
+          {row("Median time per document", (s) => `${s.latency_ms.median} ms`)}
+          {row("Model tokens (prompt + completion)", (s) => (s.tokens ? `${(s.tokens.prompt_tokens + s.tokens.completion_tokens).toLocaleString()}` : "—"))}
+        </tbody>
+      </table>
+    </Card>
   );
 }

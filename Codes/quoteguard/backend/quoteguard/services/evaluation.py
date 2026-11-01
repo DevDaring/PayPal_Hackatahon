@@ -54,6 +54,9 @@ def _same(field: str, expected, actual) -> bool:
 
 
 DATASETS = ("quoteguard-eval-v1", "quoteguard-holdout-v1")
+# Runs made with this code have seen the holdout: two general defects it exposed were fixed
+# (clause splitting inside decimals such as "3.5 mm"; plural attribute terms). Earlier runs are the unseen measurement.
+HOLDOUT_STATUS = "seen — after fixing 2 defects the holdout exposed"
 
 
 def _cases(dataset: str) -> list[dict]:
@@ -73,7 +76,8 @@ def create_run(triggered_by, mode: str, dataset: str = EVAL_DATASET_VERSION) -> 
         run = EvaluationRun(status="running", dataset_version=dataset, provider=s.AI_PROVIDER if mode == "llm" else "none", model=s.AI_MODEL if mode == "llm" else "deterministic-rules-v1",
                             extraction_mode=mode, code_revision=_code_revision(), triggered_by=triggered_by, started_at=timeutil.now(),
                             config={"scenario_date": EVAL_SCENARIO_DATE.isoformat(), "budget": "600.00", "deadline_days": 7, "ocr_provider": s.OCR_PROVIDER or None, "checkout_assumed_configured": True,
-                                    "labels_visible_to_model": False})
+                                    "labels_visible_to_model": False,
+                                    "holdout_status": HOLDOUT_STATUS if dataset == "quoteguard-holdout-v1" else None})
         db.add(run)
         db.flush()
         return run.id

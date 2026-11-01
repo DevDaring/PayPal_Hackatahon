@@ -15,12 +15,12 @@ _RANK = {"pass": 0, "unknown": 1, "fail": 2}
 _NEG_BEFORE = r"\b(?:no|not|without|non|never|excluding|excludes|except|lacks?|minus)\b[^.;:,]{0,24}?"
 _NEG_AFTER = r"[^.;:]{0,30}?\b(?:not\s+(?:supported|included|available|provided|compatible)|isn'?t\s+\w+|unsupported|not\s+part\s+of|excluded|unavailable|sold\s+separately|removed)\b"
 _COND = r"\b(?:optional|optionally|on\s+request|upon\s+request|if\s+requested|add-?on|at\s+extra\s+cost|extra\s+charge|upgrade|can\s+be\s+added|subject\s+to\s+availability|available\s+separately)\b"
-_LIMIT = r"\b(?:charging\s+only|for\s+charging|power\s+only|adapter\s+only|via\s+adapter|with\s+(?:an?\s+)?adapter)\b"
+_LIMIT = r"\b(?:charging\s+only|for\s+charging|charg(?:es|ing|e)\s+(?:over|via|through|by|with|from)|power\s+only|adapter\s+only|via\s+adapter|with\s+(?:an?\s+)?adapter)\b"
 
 
 def _term_re(term: str) -> str:
     t = re.escape(term.lower()).replace(r"\-", r"[\s-]?").replace(r"\ ", r"[\s-]?")
-    return rf"(?<![a-z0-9]){t}(?![a-z0-9])"
+    return rf"(?<![a-z0-9]){t}(?:s|es)?(?![a-z0-9])"  # plural forms ("microphones") count
 
 
 def _terms(c: Criterion) -> tuple[list[str], list[str]]:
@@ -65,14 +65,18 @@ def assess(c: Criterion, value: str | None, source: str | None = None) -> tuple[
         return "unknown", f"The quote does not state its {c.key.replace('_', ' ')}; {c.label} cannot be confirmed."
     wanted, others = _terms(c)
     worst, reasons, seen_pass, seen_other = None, [], False, False
-    for text in texts:
-        for clause in re.split(r"[.;\n]|\bbut\b|\bhowever\b", text, flags=re.I):
+    has_source = source is not None and str(source).strip() != ""
+    for idx, text in enumerate(texts):
+        from_evidence = idx == len(texts) - 1 if has_source else True
+        # Split into clauses on sentence punctuation, but never inside decimals such as "3.5 mm" or "17.00".
+        for clause in re.split(r"(?<!\d)\.|\.(?!\d)|[;\n]|\bbut\b|\bhowever\b", text, flags=re.I):
             if not clause.strip():
                 continue
             st, why = _clause_status(c, clause, wanted, others)
             if st is None:
                 continue
-            seen_pass |= st == "pass"
+            # A conflict needs the *evidence* to support the requirement; the model's bare value does not count.
+            seen_pass |= st == "pass" and from_evidence
             seen_other |= st == "fail" and "different" in why
             if worst is None or _RANK[st] > _RANK[worst]:
                 worst, reasons = st, [why]

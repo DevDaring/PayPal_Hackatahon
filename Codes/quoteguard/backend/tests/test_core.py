@@ -612,3 +612,16 @@ def test_normal_capture_rejects_missing_payee(world):
     world["paypal"].orders[op["provider_order_id"]]["pu"]["payee"] = {}
     res = payments.capture(session_scope, world["requester"], op["id"])
     assert res["state"] == "failed" and res["last_error_code"] == "ORDER_MISMATCH" and world["paypal"].capture_count == 0
+
+
+@pytest.mark.parametrize("key,value,source,expected", [
+    # Found by the frozen holdout run (see docs/TESTING.md): decimals split clauses; plurals were missed.
+    ("connector", "USB-C", "The headset charges over USB-C; audio connects through the 3.5 mm jack.", "fail"),
+    ("connector", "USB-C", "charges over USB-C", "unknown"),
+    ("microphone", "boom microphones", "Thirty (30) USB-C headsets with boom microphones at USD 17.00 each", "pass"),
+    ("connector", "USB-C", "Thirty (30) USB-C headsets at USD 17.00 each: USD 510.00. Delivery USD 30.00", "pass"),
+])
+def test_attribute_regressions_from_holdout(key, value, source, expected):
+    from quoteguard.domain.attributes import assess
+
+    assert assess(criterion_for(key, "USB-C" if key == "connector" else "yes"), value, source)[0] == expected

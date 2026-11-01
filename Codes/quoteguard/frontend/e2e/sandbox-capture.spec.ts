@@ -16,7 +16,7 @@ test("real PayPal Sandbox: buyer approves, server captures, receipt shows provid
   await page.getByRole("button", { name: "Load 3 sample quotes" }).click();
   await expect(page.getByText("Extracted", { exact: true })).toHaveCount(3, { timeout: 120_000 });
   await page.getByRole("button", { name: /Compare/ }).first().click();
-  await page.getByRole("button", { name: "Review exact purchase for approval" }).click();
+  await page.getByRole("button", { name: "Review for approval" }).click();
   await page.getByRole("button", { name: /Switch to Avery Chen/ }).click();
   await page.getByRole("button", { name: "Approve exact purchase" }).click();
   await page.getByRole("button", { name: "Continue to PayPal checkout" }).click();

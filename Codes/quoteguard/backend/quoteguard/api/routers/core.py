@@ -646,6 +646,7 @@ def demo_archive(ctx: Ctx = Depends(require_ctx), db: Session = Depends(get_db))
 # -------------------------------------------------------------- evaluation ----------
 class EvalIn(Strict):
     mode: str = Field(default="llm", pattern="^(llm|rules)$")
+    dataset: str = Field(default="quoteguard-holdout-v1", pattern="^quoteguard-(eval|holdout)-v1$")
 
 
 @router.get("/evaluation/runs", tags=["evaluation"])
@@ -670,7 +671,7 @@ def start_eval(body: EvalIn, ctx: Ctx = Depends(require_ctx), db: Session = Depe
     running = db.execute(select(func.count()).select_from(EvaluationRun).where(EvaluationRun.status == "running")).scalar()
     if running:
         raise AppError("EVALUATION_RUNNING", "An evaluation run is already in progress.", 409)
-    run_id = evaluation.create_run(ctx.principal.id, body.mode)
+    run_id = evaluation.create_run(ctx.principal.id, body.mode, body.dataset)
     jobs.enqueue(db, "run_evaluation", {"run_id": run_id}, max_attempts=1)
     return {"id": str(run_id), "status": "running"}
 

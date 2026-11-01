@@ -25,7 +25,7 @@ test("sample purchase reaches a PayPal sandbox order bound to the approved snaps
   await shot(page, "04-evidence");
 
   await page.getByRole("button", { name: /Compare/ }).first().click();
-  await expect(page.getByText("Best compliant quote")).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByText("Meets every confirmed requirement")).toBeVisible({ timeout: 90_000 });
   await expect(page.getByRole("heading", { name: "ClearWave Supplies" })).toBeVisible();
   await expect(page.getByText("Why the cheapest quote loses")).toBeVisible();
   await page.waitForTimeout(2500);
@@ -44,7 +44,7 @@ test("sample purchase reaches a PayPal sandbox order bound to the approved snaps
   await shot(page, "07-whatif");
   await page.getByRole("button", { name: "Reset" }).click();
 
-  await page.getByRole("button", { name: "Review exact purchase for approval" }).click();
+  await page.getByRole("button", { name: "Review for approval" }).click();
   await expect(page.getByText("You are acting as the requester")).toBeVisible();
   await page.getByRole("button", { name: /Switch to Avery Chen/ }).click();
   await expect(page.getByRole("button", { name: "Approve exact purchase" })).toBeEnabled();
