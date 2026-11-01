@@ -70,8 +70,8 @@ def archive_demo(hours: int = 48) -> None:
     print(f"archived {len(rows)} demo workspace(s)")
 
 
-def run_eval(mode: str = "llm") -> None:
-    run_id = evaluation.create_run(None, mode)
+def run_eval(mode: str = "llm", dataset: str = "quoteguard-eval-v1") -> None:
+    run_id = evaluation.create_run(None, mode, dataset)
     summary = evaluation.execute(run_id)
     print(json.dumps({"run_id": str(run_id), **{k: summary[k] for k in ("cases", "decision_agreement", "evidence", "unsafe_payment_attempts", "false_blocking")}}, indent=2))
 
@@ -94,6 +94,12 @@ def export_fixtures(out: str) -> None:
         manifest.append({"case_id": c["case_id"], "file": name, "category": c["category"], "expected": c["expected"], "expected_decision": c["expected_decision"]})
     # Expected labels live in a separate manifest that is never given to the model.
     (d / "eval_manifest.json").write_text(json.dumps({"dataset_version": fixtures.EVAL_DATASET_VERSION, "scenario_date": issue.isoformat(), "cases": manifest}, indent=2))
+    from . import holdout
+
+    (d / "holdout").mkdir(parents=True, exist_ok=True)
+    for c in holdout.holdout_cases():
+        (d / "holdout" / f"{c['case_id']}.pdf").write_bytes(c["pdf"]())
+    (d / "holdout_manifest.json").write_text(json.dumps(holdout.manifest(), indent=2))
     print(f"wrote fixtures to {d}")
 
 
@@ -111,5 +117,5 @@ def register_webhook(url: str) -> None:
 
 if __name__ == "__main__":
     cmd, *args = sys.argv[1:] or ["help"]
-    {"seed": lambda: seed(), "archive-demo": lambda: archive_demo(int(args[0]) if args else 48), "run-eval": lambda: run_eval(args[0] if args else "llm"),
+    {"seed": lambda: seed(), "archive-demo": lambda: archive_demo(int(args[0]) if args else 48), "run-eval": lambda: run_eval(args[0] if args else "llm", args[1] if len(args) > 1 else "quoteguard-eval-v1"),
      "export-fixtures": lambda: export_fixtures(args[0] if args else "../fixtures"), "register-webhook": lambda: register_webhook(args[0])}.get(cmd, lambda: print(__doc__))()

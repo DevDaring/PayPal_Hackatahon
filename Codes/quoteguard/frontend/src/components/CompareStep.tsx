@@ -137,45 +137,43 @@ export function CompareStep({ req, cmp, onOpen }: { req: RequestDetail; cmp: Com
 
   const best = rows.find((r) => r.rec);
   return (
-    <div className="grid gap-6">
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+    <div className="grid gap-5">
+      <div className="grid gap-4 lg:grid-cols-[1.45fr_1fr]">
         <RecommendationCard cmp={cmp} best={best} onOpen={onOpen} onApprove={(qid) => nav(`/requests/${req.id}/approve?quote=${qid}`)} />
-        <div className="grid content-start gap-4">
-          {s?.why_cheapest_loses && (
-            <Card className="p-5">
-              <div className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-danger"><TrendingDown className="size-4" aria-hidden />Why the cheapest quote loses</div>
-              <p className="mt-2 font-display text-[22px] leading-snug text-ink">{s.why_cheapest_loses.supplier} looks cheapest, but:</p>
-              <ul className="mt-2 grid gap-1.5">
-                {s.why_cheapest_loses.blocking_checks.map((c: any) => (
-                  <li key={c.key} className="flex gap-2 text-[13.5px]"><CheckBadge status={c.status} label={c.label} /><span className="text-ink-2">{c.detail}</span></li>
-                ))}
-              </ul>
-            </Card>
-          )}
-          {s?.unknowns?.length > 0 && (
-            <Card className="p-5">
-              <div className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-amber"><CircleHelp className="size-4" aria-hidden />Unknowns — ask the supplier</div>
-              <ul className="mt-2 grid gap-1.5 text-[13px] text-ink-2">{s.unknowns.slice(0, 6).map((u: any, i: number) => <li key={i}><b className="text-ink">{u.supplier}:</b> {u.check.detail}</li>)}</ul>
-            </Card>
-          )}
-        </div>
+        {s?.why_cheapest_loses ? (
+          <Card className="p-5">
+            <div className="flex items-center gap-2 text-[12.5px] font-semibold uppercase tracking-wider text-danger"><TrendingDown className="size-4" aria-hidden />Why the cheapest quote loses</div>
+            <p className="mt-1.5 font-display text-[22px] leading-snug text-ink">{s.why_cheapest_loses.supplier} looks cheapest, but:</p>
+            <ul className="mt-2 grid gap-1.5">
+              {s.why_cheapest_loses.blocking_checks.map((c: any) => (
+                <li key={c.key} className="flex gap-2 text-[13.5px]"><CheckBadge status={c.status} label={c.label} /><span className="text-ink-2">{c.detail}</span></li>
+              ))}
+            </ul>
+          </Card>
+        ) : <Card className="p-5 text-sm text-muted">The cheapest priced quote is also the best compliant one.</Card>}
       </div>
 
-      <ImpactCard cmp={cmp} />
-
       <div>
-        <SectionTitle hint="Deterministic policy · lowest verified total, then fastest delivery · click a cell for its source" right={<div className="flex items-center gap-2"><Badge tone="neutral" icon={<Scale className="size-3" aria-hidden />}>policy v{cmp.policy.version}</Badge>
-          <Button size="sm" variant="secondary" icon={<Download className="size-3.5" aria-hidden />} onClick={() => gridRef.current?.api.exportDataAsCsv({ fileName: `quoteguard-comparison-v${cmp.request_version?.version}.csv` })}>CSV</Button></div>}>Comparison grid</SectionTitle>
+        <SectionTitle hint="Deterministic policy · lowest verified total, then fastest delivery · click any value to open the line on the supplier's PDF" right={<div className="flex items-center gap-2"><Badge tone="neutral" icon={<Scale className="size-3" aria-hidden />}>policy v{cmp.policy.version}</Badge>
+          <Button size="sm" variant="secondary" icon={<Download className="size-3.5" aria-hidden />} onClick={() => gridRef.current?.api.exportDataAsCsv({ fileName: `quoteguard-comparison-v${cmp.request_version?.version}.csv`, processCellCallback: (p) => csvSafe(p.value) })}>CSV</Button></div>}>Evidence grid</SectionTitle>
         <div className="overflow-hidden rounded-2xl border border-line shadow-[var(--shadow-card)]">
           <AgGridReact<Row> ref={gridRef} theme={gridTheme} rowData={rows} columnDefs={cols} domLayout="autoHeight" suppressCellFocus={false} ensureDomOrder tooltipShowDelay={300}
             getRowId={(p) => p.data.quote_id}
-            defaultColDef={{ sortable: false, resizable: true, suppressMovable: true, flex: 1 }}
+            defaultColDef={{ sortable: false, resizable: true, suppressMovable: true, flex: 1, cellClass: "cursor-pointer" }}
             getRowStyle={(p) => (p.data?.rec ? { background: "#f2faf8" } : undefined)}
             onCellClicked={(e) => { const f = fieldForCol[e.colDef.headerName ?? ""]; if (f && e.data) onOpen(openFieldTarget(e.data, f)); }}
             onCellKeyDown={(e: any) => { if (e.event?.key === "Enter") { const f = fieldForCol[e.colDef.headerName ?? ""]; if (f && e.data) onOpen(openFieldTarget(e.data, f)); } }} />
         </div>
         <p className="mt-2 text-[12px] text-muted">Delivery times are supplier claims, not verified fulfilment. Tax values in sample quotes are synthetic fixture terms. “Checkout” is shown separately so integration availability never changes the compliance ranking.</p>
       </div>
+
+      <ImpactCard cmp={cmp} />
+      {s?.unknowns?.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 text-[12.5px] font-semibold uppercase tracking-wider text-amber"><CircleHelp className="size-4" aria-hidden />Unknowns — ask the supplier</div>
+          <ul className="mt-2 grid gap-1.5 text-[13px] text-ink-2">{s.unknowns.slice(0, 6).map((u: any, i: number) => <li key={i}><b className="text-ink">{u.supplier}:</b> {u.check.detail}</li>)}</ul>
+        </Card>
+      )}
 
       <WhatIf req={req} cmp={cmp} onPreview={setPreview} />
     </div>
@@ -197,17 +195,22 @@ function RecommendationCard({ cmp, best, onOpen, onApprove }: { cmp: Comparison;
     ) : <span key={i}>{part}</span>;
   });
   return (
-    <Card className="relative overflow-hidden p-6">
+    <Card className="relative overflow-hidden p-5">
       <div className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-teal-soft blur-2xl" />
       <div className="relative">
         {best ? (
           <>
-            <div className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-teal"><Award className="size-4" aria-hidden />Best compliant quote</div>
-            <div className="mt-2 flex flex-wrap items-end gap-x-4 gap-y-1">
-              <h3 className="font-display text-[40px] leading-none text-ink">{best.supplier}</h3>
-              <span className="font-display text-[40px] leading-none tnum text-teal-strong">{money(best.outcome.verified_total, best.version.currency)}</span>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-[12.5px] font-semibold uppercase tracking-wider text-teal"><Award className="size-4" aria-hidden />Meets every confirmed requirement</div>
+                <div className="mt-1.5 flex flex-wrap items-end gap-x-3 gap-y-1">
+                  <h3 className="font-display text-[34px] leading-none text-ink">{best.supplier}</h3>
+                  <span className="font-display text-[34px] leading-none tnum text-teal-strong">{money(best.outcome.verified_total, best.version.currency)}</span>
+                </div>
+              </div>
+              <Button disabled={!best.outcome.payment_eligible} onClick={() => onApprove(best.quote_id)} icon={<ArrowRight className="size-4" aria-hidden />}>Review for approval</Button>
             </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
               {best.outcome.checks.map((c) => <CheckBadge key={c.key} status={c.status} label={c.label} />)}
             </div>
           </>
@@ -218,19 +221,17 @@ function RecommendationCard({ cmp, best, onOpen, onApprove }: { cmp: Comparison;
             <p className="mt-1 text-sm text-muted">QuoteGuard never forces a recommendation. Resolve unknowns with suppliers or adjust requirements.</p>
           </>
         )}
+        {best && !s?.best_has_checkout && <p className="mt-2 text-[13px] text-amber">Checkout is not configured for this supplier.</p>}
         {ex ? (
-          <div className="mt-5 rounded-xl border border-line bg-sunken/60 p-4">
-            <div className="mb-1.5 flex items-center gap-2 text-[12px] text-muted"><Bot className="size-3.5" aria-hidden />{ex.method === "llm" ? <>Plain-English summary by <b>{ex.model}</b></> : "Template summary"}</div>
-            <div className="grid gap-2 text-[14px] leading-relaxed text-ink-2">{(ex.paragraphs ?? []).map((p: string, i: number) => <p key={i}>{withCites(p)}</p>)}</div>
+          <details className="group mt-4 rounded-xl border border-line bg-sunken/60 p-3.5">
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-[13px] text-ink-2">
+              <Bot className="size-3.5 text-teal" aria-hidden /><span className="min-w-0 flex-1 truncate"><b className="text-ink">{ex.headline || "Explanation"}</b> · {ex.method === "llm" ? <>written by {ex.model} with citations</> : "template"}</span>
+              <span className="text-[12px] font-medium text-teal group-open:hidden">Read why</span><span className="hidden text-[12px] font-medium text-teal group-open:inline">Hide</span>
+            </summary>
+            <div className="mt-2 grid gap-2 text-[14px] leading-relaxed text-ink-2">{(ex.paragraphs ?? []).map((p: string, i: number) => <p key={i}>{withCites(p)}</p>)}</div>
             <p className="mt-2 flex items-start gap-1.5 text-[11.5px] text-muted"><Info className="mt-0.5 size-3 shrink-0" aria-hidden />{ex.disclaimer}</p>
-          </div>
-        ) : <div className="mt-5 skeleton h-24" />}
-        {best && (
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Button size="lg" disabled={!best.outcome.payment_eligible} onClick={() => onApprove(best.quote_id)} icon={<ArrowRight className="size-4" aria-hidden />}>Review exact purchase for approval</Button>
-            {!s?.best_has_checkout && <span className="text-[13px] text-amber">Checkout is not configured for this supplier.</span>}
-          </div>
-        )}
+          </details>
+        ) : <div className="mt-4 flex items-center gap-2 rounded-xl bg-sunken/60 p-3 text-[12.5px] text-muted"><Bot className="size-3.5" aria-hidden />Writing the plain-English explanation…</div>}
       </div>
     </Card>
   );
@@ -245,6 +246,10 @@ function WhatIf({ req, cmp, onPreview }: { req: RequestDetail; cmp: Comparison; 
   const [res, setRes] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const changed = budget !== Number(spec.budget_amount) || days !== (spec.deadline_days ?? 7);
+  const base = Number(spec.budget_amount);
+  const r10 = (x: number) => Math.max(10, Math.round(x / 10) * 10);
+  const range = { min: r10(base * 0.5), max: r10(base * 1.6), step: base >= 2000 ? 50 : 10 };
+  const presets = Array.from(new Set([r10(base * 0.933), base, r10(base * 1.083)]));
   useEffect(() => { setBudget(Number(spec.budget_amount)); setDays(spec.deadline_days ?? 7); setRes(null); }, [cmp.request_version?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!changed) { setRes(null); onPreview(null); return; }
@@ -268,8 +273,8 @@ function WhatIf({ req, cmp, onPreview }: { req: RequestDetail; cmp: Comparison; 
         <div className="grid gap-5">
           <label className="block">
             <div className="flex justify-between text-[13px]"><span className="font-medium text-ink-2">Budget</span><span className="tnum font-semibold text-ink">{money(budget.toFixed(2), spec.currency)}</span></div>
-            <input type="range" min={400} max={900} step={10} value={budget} onChange={(e) => setBudget(Number(e.target.value))} className="mt-2 w-full accent-teal" aria-label="Budget" />
-            <div className="flex justify-between text-[11px] text-muted"><span>$400</span><span>confirmed {money(spec.budget_amount, spec.currency)}</span><span>$900</span></div>
+            <input type="range" min={range.min} max={range.max} step={range.step} value={budget} onChange={(e) => setBudget(Number(e.target.value))} className="mt-2 w-full accent-teal" aria-label="Budget" />
+            <div className="flex justify-between text-[11px] text-muted"><span>{money(String(range.min), spec.currency)}</span><span>confirmed {money(spec.budget_amount, spec.currency)}</span><span>{money(String(range.max), spec.currency)}</span></div>
           </label>
           <label className="block">
             <div className="flex justify-between text-[13px]"><span className="font-medium text-ink-2">Delivery window</span><span className="tnum font-semibold text-ink">{days} days</span></div>
@@ -277,12 +282,16 @@ function WhatIf({ req, cmp, onPreview }: { req: RequestDetail; cmp: Comparison; 
             <div className="flex justify-between text-[11px] text-muted"><span>1</span><span>confirmed {spec.deadline_days} days</span><span>21</span></div>
           </label>
           <div className="flex flex-wrap gap-2">
-            {[560, 600, 650].map((b) => <button key={b} onClick={() => setBudget(b)} className={cx("rounded-full border px-3 py-1 text-[12.5px]", budget === b ? "border-teal bg-teal-soft text-teal-strong" : "border-line-strong hover:bg-sunken")}>${b}</button>)}
+            {presets.map((b) => <button key={b} onClick={() => setBudget(b)} className={cx("rounded-full border px-3 py-1 text-[12.5px]", budget === b ? "border-teal bg-teal-soft text-teal-strong" : "border-line-strong hover:bg-sunken")}>{money(String(b), spec.currency)}</button>)}
             <button onClick={() => { setBudget(Number(spec.budget_amount)); setDays(spec.deadline_days ?? 7); }} className="rounded-full px-3 py-1 text-[12.5px] text-muted hover:bg-sunken">Reset</button>
           </div>
           <p className="text-[12px] text-muted">Quantity changes need a revised quote unless the supplier's pricing terms explicitly say the unit price applies.</p>
         </div>
         <div aria-live="polite">
+          <div className="mb-3 flex flex-wrap gap-2 text-[12.5px]">
+            <span className="rounded-full border border-teal/30 bg-teal-soft px-3 py-1 text-teal-strong"><b>Confirmed purchase:</b> {money(spec.budget_amount, spec.currency)} budget · {spec.deadline_days} days</span>
+            {changed && <span className="rounded-full border border-[#c9d7ee] bg-[#eef3fb] px-3 py-1 text-[#1f4b8f]"><b>Preview:</b> {money(budget.toFixed(2), spec.currency)} budget · {days} days — not used for payment</span>}
+          </div>
           {!changed ? <div className="grid h-full place-items-center rounded-xl border border-dashed border-line-strong p-6 text-center text-sm text-muted">Move a slider to preview how eligibility would change.</div> : !res ? <div className="skeleton h-40" /> : (
             <div className={cx("grid gap-3 transition-opacity", loading && "opacity-60")}>
               {res.changes.length ? res.changes.map((c: any) => (
@@ -316,7 +325,7 @@ function ImpactCard({ cmp }: { cmp: Comparison }) {
     const v = q.version;
     const total = q.outcome.computed_total ? Number(q.outcome.computed_total) : null;
     if (total != null && v.shipping != null && total > budget && total - Number(v.shipping) <= budget)
-      items.push({ tone: "bad", title: `Hidden cost at ${q.supplier}`, detail: `${money(v.shipping, v.currency)} shipping turns a ${money(v.subtotal, v.currency)} item price into ${money(q.outcome.computed_total, v.currency)} — over budget.` });
+      items.push({ tone: "bad", title: `Shipping pushes ${q.supplier} over budget`, detail: `${money(v.shipping, v.currency)} shipping turns a ${money(v.subtotal, v.currency)} item price into ${money(q.outcome.computed_total, v.currency)} — over budget.` });
     for (const c of q.outcome.checks.filter((c) => c.key.startsWith("attr:") && c.status === "fail"))
       items.push({ tone: "bad", title: `Wrong spec at ${q.supplier}`, detail: c.detail + (best && total != null && best.outcome.verified_total ? ` Cheaper by ${money(String(Number(best.outcome.verified_total) - total), v.currency)}, but it isn't what you asked for.` : "") });
     for (const c of q.outcome.checks.filter((c) => c.status === "unknown"))
@@ -326,7 +335,7 @@ function ImpactCard({ cmp }: { cmp: Comparison }) {
   if (!items.length && !best) return null;
   return (
     <Card className="p-5">
-      <SectionTitle hint="Computed from this request's stored evidence — nothing here is a model opinion" right={best ? <Badge tone="good">{items.filter((i) => i.tone === "bad").length} costly mistakes avoided</Badge> : null}>
+      <SectionTitle hint="Computed from this request's stored evidence — nothing here is a model opinion" right={best ? <Badge tone="neutral">{items.filter((i) => i.tone === "bad").length} purchasing issues detected in this sample</Badge> : null}>
         <span className="inline-flex items-center gap-1.5"><Radar className="size-4 text-teal" aria-hidden />What QuoteGuard caught</span>
       </SectionTitle>
       <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
@@ -338,11 +347,17 @@ function ImpactCard({ cmp }: { cmp: Comparison }) {
         ))}
         {best && (
           <div className="rounded-xl border border-teal/25 bg-teal-soft/60 p-3">
-            <div className="text-[13.5px] font-semibold text-teal-strong">Safe choice: {best.supplier}</div>
+            <div className="text-[13.5px] font-semibold text-teal-strong">Meets confirmed requirements: {best.supplier}</div>
             <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{money(best.outcome.verified_total, best.version.currency)} — every requirement evidenced, {money(String(budget - Number(best.outcome.verified_total)), best.version.currency)} under budget, PayPal checkout configured.</p>
           </div>
         )}
       </div>
     </Card>
   );
+}
+
+/** Supplier text is untrusted: prefix values that a spreadsheet would execute as a formula. */
+export function csvSafe(v: unknown): string {
+  const s = v == null ? "" : String(v);
+  return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
 }

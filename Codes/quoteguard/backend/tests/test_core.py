@@ -496,3 +496,119 @@ def test_agent_toolkit_tools_are_read_only_and_server_scoped(monkeypatch):
     res = paypal_tools.execute("paypal_get_order_details", "ORDER1", None)
     assert seen == {"get_order_details": {"order_id": "ORDER1"}}
     assert res["order"]["status"] == "CREATED" and "message" not in json.dumps(res)  # toolkit prose is never forwarded
+
+
+# P0-A: negated / conditional / conflicting specifications -------------------------
+@pytest.mark.parametrize("key,value,source,expected", [
+    ("connector", "USB-C", None, "pass"),
+    ("connector", "USB-C not supported", None, "fail"),
+    ("connector", "USB-C", "Connector: USB-C not supported", "fail"),  # value looks right, evidence negates it
+    ("connector", "USB-C charging only; audio via USB-A", None, "fail"),
+    ("connector", "USB-C (optional adapter at extra cost)", None, "unknown"),
+    ("connector", "No USB-C port", None, "fail"),
+    ("connector", None, None, "unknown"),
+    ("connector", "something unrecognised about ports", None, "unknown"),
+    ("microphone", "no microphone", None, "fail"),
+    ("microphone", "microphone not included", None, "fail"),
+    ("microphone", "yes", "Microphone sold separately", "fail"),
+    ("microphone", "Optional boom mic", None, "unknown"),
+    ("microphone", "yes", "Product: USB-C stereo headset with noise-cancelling boom microphone", "pass"),
+])
+def test_attribute_negation_and_conditions(key, value, source, expected):
+    from quoteguard.domain.attributes import assess
+
+    c = criterion_for(key, "USB-C" if key == "connector" else "yes")
+    assert assess(c, value, source)[0] == expected
+    o = policy.evaluate(SPEC, facts(attributes={**facts().attributes, key: value}, attribute_sources={key: source} if source else {}), date(2026, 11, 1))
+    assert o.payment_eligible == (expected == "pass")
+
+
+@pytest.mark.parametrize("fixture", ["negated_mic", "usbc_charging_only"])
+def test_negated_spec_document_cannot_be_approved(world, fixture):
+    """Full pipeline: PDF → extraction → policy → approval, from a supplier WITH a configured merchant."""
+    from quoteguard import fixtures as fx
+    from quoteguard.models import PurchaseRequest, Supplier
+
+    with session_scope() as db:
+        req = db.get(PurchaseRequest, world["request_id"])
+        cw = db.execute(select(Supplier).where(Supplier.workspace_id == world["workspace_id"], Supplier.name == "ClearWave Supplies")).scalar_one()
+        q = fx.lab_fixtures(timeutil.local_date(req.timezone, req.created_at))[fixture]
+        documents.upload(db, world["requester"], req.id, f"{fixture}.pdf", fx.quote_pdf(q), "application/pdf", is_sample=True, supplier_id=cw.id, confirmed_by="test fixture")
+    run_analysis(str(world["request_id"]))
+    qs, _ = quotes_by_supplier(world["request_id"], world["requester"])
+    target = next(q for q in qs.values() if q["document"]["filename"] == f"{fixture}.pdf")
+    assert target["outcome"]["checkout_available"] is True  # only the attribute logic can stop it
+    assert target["outcome"]["mandatory_status"] in ("fail", "unknown") and not target["outcome"]["payment_eligible"]
+    with session_scope() as db:
+        rv = approvals.review(db, world["approver"], world["request_id"], target["quote_id"])
+        with pytest.raises(AppError) as e:
+            approvals.approve(db, world["approver"], world["request_id"], target["quote_id"], rv["terms_hash"])
+    assert e.value.code in ("QUOTE_NOT_ELIGIBLE", "QUOTE_NEEDS_REVIEW")
+
+
+# P0-B: recovery enforces the same checks as normal capture ---------------------------
+def _ambiguous_capture_not_processed(world):
+    """Order approved by the buyer; the capture call fails ambiguously BEFORE PayPal processes it."""
+    from quoteguard.paypal.base import ProviderAmbiguous
+
+    appr_id, _ = approve(world)
+    op = checkout(world, appr_id)
+    world["paypal"].approve(op["provider_order_id"])
+    world["paypal"].fail_next["capture"] = ProviderAmbiguous("connection reset before processing")
+    res = payments.capture(session_scope, world["requester"], op["id"])
+    assert res["state"] == "reconciling" and world["paypal"].capture_count == 0
+    return op
+
+
+def test_recovery_after_expiry_does_not_capture(world):
+    op = _ambiguous_capture_not_processed(world)
+    timeutil.freeze(timeutil.now() + timedelta(minutes=61))
+    res = payments.reconcile(session_scope, op["id"])
+    assert res["state"] == "canceled" and res["last_error_code"] == "APPROVAL_EXPIRED"
+    assert world["paypal"].capture_count == 0 and len(world["paypal"].orders) == 1  # nothing captured, nothing replaced
+
+
+def test_recovery_with_valid_approval_captures_once_even_with_duplicate_deliveries(world):
+    op = _ambiguous_capture_not_processed(world)
+    with ThreadPoolExecutor(4) as pool:  # worker + webhook + manual retry racing
+        states = list(pool.map(lambda _: payments.reconcile(session_scope, op["id"])["state"], range(4)))
+    assert "completed" in states and world["paypal"].capture_count == 1
+    caps = [c for c in world["paypal"].calls if c[0] == "capture"]
+    assert len({c[1] for c in caps}) == 1  # every attempt reused the same PayPal-Request-Id
+
+
+@pytest.mark.parametrize("tamper", ["wrong_payee", "missing_payee", "wrong_operation", "changed_amount"])
+def test_recovery_rejects_mismatched_provider_order(world, tamper):
+    op = _ambiguous_capture_not_processed(world)
+    order = world["paypal"].orders[op["provider_order_id"]]
+    if tamper == "wrong_payee":
+        order["pu"]["payee"] = {"merchant_id": "ATTACKER"}
+    elif tamper == "missing_payee":
+        order["pu"]["payee"] = {}
+    elif tamper == "wrong_operation":
+        order["pu"]["custom_id"] = str(uuid.uuid4())
+    else:
+        order["pu"]["amount"] = {**order["pu"]["amount"], "value": "1.00"}
+    res = payments.reconcile(session_scope, op["id"])
+    assert res["state"] == "failed" and res["last_error_code"] == "ORDER_MISMATCH"
+    assert world["paypal"].capture_count == 0
+
+
+def test_existing_capture_is_recorded_after_approval_expiry(world):
+    appr_id, _ = approve(world)
+    op = checkout(world, appr_id)
+    world["paypal"].approve(op["provider_order_id"])
+    world["paypal"].timeout_after_capture = True  # PayPal captured, response lost
+    assert payments.capture(session_scope, world["requester"], op["id"])["state"] == "reconciling"
+    timeutil.freeze(timeutil.now() + timedelta(hours=3))
+    res = payments.reconcile(session_scope, op["id"])
+    assert res["state"] == "completed" and res["provider_capture_id"] and world["paypal"].capture_count == 1
+
+
+def test_normal_capture_rejects_missing_payee(world):
+    appr_id, _ = approve(world)
+    op = checkout(world, appr_id)
+    world["paypal"].approve(op["provider_order_id"])
+    world["paypal"].orders[op["provider_order_id"]]["pu"]["payee"] = {}
+    res = payments.capture(session_scope, world["requester"], op["id"])
+    assert res["state"] == "failed" and res["last_error_code"] == "ORDER_MISMATCH" and world["paypal"].capture_count == 0

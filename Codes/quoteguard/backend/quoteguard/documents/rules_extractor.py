@@ -11,7 +11,7 @@ from datetime import datetime
 
 from .schema import Cited, Extraction, LineItem
 
-RULES_VERSION = "rules-v2"
+RULES_VERSION = "rules-v3"
 _NUM = r"(?:US\$|USD|\$|€|£|₹|INR|EUR)?\s?([0-9][0-9,]*(?:\.[0-9]{1,2})?)"
 _WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "fourteen": 14, "twenty": 20, "thirty": 30}
 
@@ -125,18 +125,28 @@ def extract(pages: list[dict], attribute_keys: list[str] | None = None) -> Extra
         ex.pricing_terms = Cited(value=hit[2].group(1), page=hit[0], source_text=hit[1])
         ex.pricing_scales_with_quantity = bool(re.search(r"unit price (applies|holds|valid) (for|to) (any|all|orders)", hit[2].group(1), re.I))
 
-    if "connector" in attribute_keys:
-        hit = _first(pages, r"\b(USB[- ]?C|USB Type-C|USB[- ]?A|USB Type-A|3\.5\s?mm)\b")
-        if hit:
-            v = hit[2].group(1).upper().replace(" ", "-").replace("TYPE-", "")
-            v = {"USB-C": "USB-C", "USBC": "USB-C", "USB-A": "USB-A", "USBA": "USB-A"}.get(v.replace("--", "-"), hit[2].group(1))
-            ex.attributes["connector"] = Cited(value=v, page=hit[0], source_text=hit[1])
-    if "microphone" in attribute_keys:
-        hit = _first(pages, r"\b(no microphone|without (a )?microphone|microphone|boom mic|mic)\b")
-        if hit:
-            neg = hit[2].group(1).lower().startswith(("no ", "without"))
-            ex.attributes["microphone"] = Cited(value="no" if neg else "yes", page=hit[0], source_text=hit[1])
+    def _all(pattern):
+        return [(pg, line, m) for pg, line in _lines(pages) for m in [re.search(pattern, line, re.I)] if m]
 
+    if "connector" in attribute_keys:
+        hits = _all(r"\b(USB[- ]?C|USB Type-C|Type-C|USB[- ]?A|USB Type-A|3\.5\s?mm|Bluetooth)\b")
+        if hits:
+            def norm(x):
+                x = x.upper().replace(" ", "-").replace("TYPE-", "")
+                return {"USB-C": "USB-C", "USBC": "USB-C", "C": "USB-C", "USB-A": "USB-A", "USBA": "USB-A"}.get(x.replace("--", "-"), x)
+            values = {norm(h[2].group(1)) for h in hits}
+            pg, line, m = hits[0]
+            # Several different connectors mentioned: keep every line so the policy sees the conflict.
+            value = norm(m.group(1)) if len(values) == 1 else "; ".join(dict.fromkeys(h[1] for h in hits))[:300]
+            ex.attributes["connector"] = Cited(value=value, page=pg, source_text=line)
+    if "microphone" in attribute_keys:
+        hits = _all(r"\b(microphones?|boom mic|mic)\b")
+        if hits:
+            # Prefer a line that negates or conditions the microphone over a plain mention.
+            qual = [h for h in hits if re.search(r"\b(no|not|without|optional|sold separately|extra|excluded)\b", h[1], re.I)]
+            pg, line, _ = (qual or hits)[0]
+            neg = bool(re.search(r"\b(no|without)\s+(a\s+)?(microphone|mic)\b|\b(microphone|mic)\b[^.;]{0,25}\b(not included|excluded|sold separately)\b", line, re.I))
+            ex.attributes["microphone"] = Cited(value="no" if neg else line[:200], page=pg, source_text=line)
     if ex.product_description.value and ex.quantity.value:
         ex.line_items = [LineItem(description=str(ex.product_description.value), quantity=int(ex.quantity.value), unit_price=ex.unit_price.value, line_total=ex.subtotal.value)]
     return ex

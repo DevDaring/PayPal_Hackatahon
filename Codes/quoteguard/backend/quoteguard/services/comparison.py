@@ -85,6 +85,7 @@ def facts(db: Session, req: PurchaseRequest) -> list[tuple[Quote, QuoteVersion, 
             delivery_days=qv.delivery_days, valid_until=qv.valid_until, attributes={k: v for k, v in (qv.attributes or {}).items() if not k.startswith("_")},
             needs_review=qv.needs_review, checkout_available=ok, unit_price=qv.unit_price,
             scalable_pricing=(qv.attributes or {}).get("_scalable_pricing") == "yes", flat_shipping=(qv.attributes or {}).get("_flat_shipping") == "yes",
+            attribute_sources={k[5:]: v for k, v in (qv.attributes or {}).items() if k.startswith("_src_") and v},
         )
         out.append((q, qv, f, reason))
     return out

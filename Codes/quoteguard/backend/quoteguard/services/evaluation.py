@@ -53,11 +53,24 @@ def _same(field: str, expected, actual) -> bool:
     return str(expected).strip().upper() == str(actual).strip().upper()
 
 
-def create_run(triggered_by, mode: str) -> uuid.UUID:
+DATASETS = ("quoteguard-eval-v1", "quoteguard-holdout-v1")
+
+
+def _cases(dataset: str) -> list[dict]:
+    if dataset == "quoteguard-holdout-v1":
+        from ..holdout import holdout_cases
+
+        return [{**c, "kind": "image" if c["category"] == "ocr" else "text"} for c in holdout_cases()]
+    return eval_cases()
+
+
+def create_run(triggered_by, mode: str, dataset: str = EVAL_DATASET_VERSION) -> uuid.UUID:
+    if dataset not in DATASETS:
+        raise ValueError("unknown dataset")
     s = get_settings()
     mode = "llm" if mode == "llm" and s.ai_configured else "rules"
     with session_scope() as db:
-        run = EvaluationRun(status="running", dataset_version=EVAL_DATASET_VERSION, provider=s.AI_PROVIDER if mode == "llm" else "none", model=s.AI_MODEL if mode == "llm" else "deterministic-rules-v1",
+        run = EvaluationRun(status="running", dataset_version=dataset, provider=s.AI_PROVIDER if mode == "llm" else "none", model=s.AI_MODEL if mode == "llm" else "deterministic-rules-v1",
                             extraction_mode=mode, code_revision=_code_revision(), triggered_by=triggered_by, started_at=timeutil.now(),
                             config={"scenario_date": EVAL_SCENARIO_DATE.isoformat(), "budget": "600.00", "deadline_days": 7, "ocr_provider": s.OCR_PROVIDER or None, "checkout_assumed_configured": True,
                                     "labels_visible_to_model": False})
@@ -75,7 +88,11 @@ def execute(run_id) -> dict:
     ev_checked = ev_correct = agree = n = unsafe = unsafe_blocked = should_pass = false_block = 0
     by_cat: dict[str, list[int]] = {}
     latencies = []
-    for case in eval_cases():
+    with session_scope() as db:
+        dataset = db.get(EvaluationRun, uuid.UUID(str(run_id))).dataset_version
+    t_start = timeutil.now()
+    review = 0
+    for case in _cases(dataset):
         n += 1
         t0 = time.monotonic()
         err = None
@@ -84,7 +101,7 @@ def execute(run_id) -> dict:
         blocked = True
         ev_c = ev_ok = 0
         try:
-            pdf = image_only_pdf(case["q"]) if case["kind"] == "image" else quote_pdf(case["q"])
+            pdf = case["pdf"]() if "pdf" in case else (image_only_pdf(case["q"]) if case["kind"] == "image" else quote_pdf(case["q"]))
             pages = parse(pdf, 20)["pages"]
             ocr = False
             if all(len("".join((p["text"] or "").split())) < 25 for p in pages):
@@ -116,7 +133,8 @@ def execute(run_id) -> dict:
                 facts = policy.QuoteFacts(case["case_id"], str(ex.supplier_name.value), cur, "unknown" if cur is None else ("explicit" if ex.currency_explicit else "inferred"),
                                           _int(ex.quantity.value), to_money(ex.subtotal.value), to_money(ex.shipping.value), to_money(ex.tax.value), to_money(ex.discount.value), to_money(ex.total.value),
                                           _int(ex.delivery_days.value), _date(ex.valid_until.value), {k: v.value for k, v in ex.attributes.items()}, needs_review=ocr or any(i.split(":")[0] in ("subtotal", "shipping", "tax", "total", "quantity") for i in meta.get("issues", [])),
-                                          checkout_available=True, unit_price=to_money(ex.unit_price.value))
+                                          checkout_available=True, unit_price=to_money(ex.unit_price.value),
+                                          attribute_sources={k: v.source_text for k, v in ex.attributes.items() if v.source_text})
                 o = policy.evaluate_all(spec, [facts], EVAL_SCENARIO_DATE)[0]
                 actual_decision, blocked = o.mandatory_status, not o.payment_eligible
         except Exception as e:
@@ -126,6 +144,7 @@ def execute(run_id) -> dict:
         latencies.append(ms)
         ev_checked += ev_c
         ev_correct += ev_ok
+        review += int(actual_decision in ("unknown", "error"))
         a = actual_decision == case["expected_decision"]
         agree += int(a)
         cat = by_cat.setdefault(case["category"], [0, 0])
@@ -149,6 +168,9 @@ def execute(run_id) -> dict:
         "false_blocking": {"blocked": false_block, "total": should_pass},
         "latency_ms": {"samples": latencies, "count": len(latencies), "median": sorted(latencies)[len(latencies) // 2] if latencies else None},
         "confidence_note": "No model confidence percentages are reported; extraction status categories are used instead.",
+        "review_burden": {"needs_review": review, "total": n, "note": "Cases ending 'unknown' need a person (ask supplier or correct a field)."},
+        "false_eligibility": {"count": unsafe - unsafe_blocked, "total": unsafe},
+        "tokens": _tokens_since(t_start),
     }
     with session_scope() as db:
         run = db.get(EvaluationRun, uuid.UUID(str(run_id)))
@@ -166,3 +188,15 @@ def run_json(run: EvaluationRun, cases: list[EvaluationCase] | None = None) -> d
 
 
 __all__ = ["create_run", "execute", "run_json", "date"]
+
+
+def _tokens_since(start) -> dict:
+    """Measured model usage during this run (evaluation calls have no workspace)."""
+    from sqlalchemy import func, select
+
+    from ..models import AICall
+
+    with session_scope() as db:
+        calls, pt, ct = db.execute(select(func.count(), func.coalesce(func.sum(AICall.prompt_tokens), 0), func.coalesce(func.sum(AICall.completion_tokens), 0))
+                                   .where(AICall.workspace_id.is_(None), AICall.created_at >= start, AICall.purpose == "extract_quote")).one()
+    return {"model_calls": calls, "prompt_tokens": int(pt), "completion_tokens": int(ct)}

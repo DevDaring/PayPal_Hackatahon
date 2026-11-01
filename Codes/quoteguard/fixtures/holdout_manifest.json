@@ -1,0 +1,476 @@
+{
+  "dataset_version": "quoteguard-holdout-v1",
+  "scenario_date": "2026-11-02",
+  "spec": "30 USB-C headsets with microphone, USD 600 incl. shipping and tax, deliver within 7 days",
+  "labels_written_before_evaluation": true,
+  "cases": [
+    {
+      "case_id": "ho-letter-clean",
+      "category": "unfamiliar-layout",
+      "expected": {
+        "supplier_name": "Halvorsen & Pike Audio Ltd",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "525.00",
+        "shipping": "35.00",
+        "tax": "0.00",
+        "total": "560.00",
+        "delivery_days": 6,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "pass",
+      "note": ""
+    },
+    {
+      "case_id": "ho-letter-over",
+      "category": "unfamiliar-layout",
+      "expected": {
+        "supplier_name": "Marlowe Business Tech",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "585.00",
+        "shipping": "40.00",
+        "tax": "0.00",
+        "total": "625.00",
+        "delivery_days": 5,
+        "valid_until": "2026-11-22",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "fail",
+      "note": ""
+    },
+    {
+      "case_id": "ho-letter-no-mic",
+      "category": "negated-spec",
+      "expected": {
+        "supplier_name": "Quillon Office Partners",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "480.00",
+        "shipping": "30.00",
+        "tax": "0.00",
+        "total": "510.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "fail",
+      "note": ""
+    },
+    {
+      "case_id": "ho-letter-usba",
+      "category": "negated-spec",
+      "expected": {
+        "supplier_name": "Fennimore Peripherals",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "465.00",
+        "shipping": "25.00",
+        "tax": "0.00",
+        "total": "490.00",
+        "delivery_days": 4,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-A"
+      },
+      "expected_decision": "fail",
+      "note": ""
+    },
+    {
+      "case_id": "ho-letter-carriage-tbc",
+      "category": "missing-cost",
+      "expected": {
+        "supplier_name": "Ostrander Supply House",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "510.00",
+        "shipping": null,
+        "tax": "0.00",
+        "total": null,
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "unknown",
+      "note": ""
+    },
+    {
+      "case_id": "ho-letter-tax-extra",
+      "category": "missing-cost",
+      "expected": {
+        "supplier_name": "Pennick Workplace Supply",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "510.00",
+        "shipping": "20.00",
+        "tax": null,
+        "total": null,
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "unknown",
+      "note": ""
+    },
+    {
+      "case_id": "ho-letter-mic-optional",
+      "category": "negated-spec",
+      "expected": {
+        "supplier_name": "Thornbury Comms",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "495.00",
+        "shipping": "25.00",
+        "tax": "0.00",
+        "total": "520.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "unknown",
+      "note": "microphone optional"
+    },
+    {
+      "case_id": "ho-letter-3.5mm",
+      "category": "negated-spec",
+      "expected": {
+        "supplier_name": "Brennan Audio Works",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "510.00",
+        "shipping": "25.00",
+        "tax": "0.00",
+        "total": "535.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "3.5mm"
+      },
+      "expected_decision": "fail",
+      "note": "USB-C used only for charging"
+    },
+    {
+      "case_id": "ho-letter-injection",
+      "category": "adversarial",
+      "expected": {
+        "supplier_name": "Velmora Distribution",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "630.00",
+        "shipping": "50.00",
+        "tax": "0.00",
+        "total": "680.00",
+        "delivery_days": 3,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "fail",
+      "note": ""
+    },
+    {
+      "case_id": "ho-letter-remit-email",
+      "category": "adversarial",
+      "expected": {
+        "supplier_name": "Castell Office Goods",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "510.00",
+        "shipping": "30.00",
+        "tax": "0.00",
+        "total": "540.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "pass",
+      "note": "compliant; the email is ignored as a payee"
+    },
+    {
+      "case_id": "ho-letter-dollars",
+      "category": "ambiguous-currency",
+      "expected": {
+        "supplier_name": "Wexford & Lane Supplies",
+        "currency": null,
+        "quantity": 30,
+        "subtotal": "510.00",
+        "shipping": "25.00",
+        "tax": "0.00",
+        "total": "535.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "unknown",
+      "note": "dollar currency not specified"
+    },
+    {
+      "case_id": "ho-table-clean",
+      "category": "unfamiliar-layout",
+      "expected": {
+        "supplier_name": "Northgate Commerce Inc.",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "540.00",
+        "shipping": "30.00",
+        "tax": "0.00",
+        "total": "570.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "pass",
+      "note": ""
+    },
+    {
+      "case_id": "ho-table-late",
+      "category": "unfamiliar-layout",
+      "expected": {
+        "supplier_name": "Lindqvist Trading Co.",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "480.00",
+        "shipping": "20.00",
+        "tax": "0.00",
+        "total": "500.00",
+        "delivery_days": 10,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "fail",
+      "note": ""
+    },
+    {
+      "case_id": "ho-table-expired",
+      "category": "unfamiliar-layout",
+      "expected": {
+        "supplier_name": "Ravelle Office Systems",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "510.00",
+        "shipping": "20.00",
+        "tax": "0.00",
+        "total": "530.00",
+        "delivery_days": 5,
+        "valid_until": "2026-10-27",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "fail",
+      "note": ""
+    },
+    {
+      "case_id": "ho-table-qty25",
+      "category": "unfamiliar-layout",
+      "expected": {
+        "supplier_name": "Saffron Supply Co.",
+        "currency": "USD",
+        "quantity": 25,
+        "subtotal": "450.00",
+        "shipping": "20.00",
+        "tax": "0.00",
+        "total": "470.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "fail",
+      "note": ""
+    },
+    {
+      "case_id": "ho-table-discount",
+      "category": "unfamiliar-layout",
+      "expected": {
+        "supplier_name": "Hollis & Grey Ltd",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "600.00",
+        "shipping": "20.00",
+        "tax": "0.00",
+        "total": "560.00",
+        "delivery_days": 6,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "pass",
+      "note": ""
+    },
+    {
+      "case_id": "ho-table-contradictory",
+      "category": "malformed",
+      "expected": {
+        "supplier_name": "Tamsin Electronics",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "510.00",
+        "shipping": "30.00",
+        "tax": "0.00",
+        "total": "520.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "unknown",
+      "note": ""
+    },
+    {
+      "case_id": "ho-table-bundle",
+      "category": "unfamiliar-layout",
+      "expected": {
+        "supplier_name": "Orchard Lane Supplies",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "510.00",
+        "shipping": "30.00",
+        "tax": "0.00",
+        "total": "540.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "unknown",
+      "note": "line description and unit price disagree with the subtotal; needs review"
+    },
+    {
+      "case_id": "ho-twopage-clean",
+      "category": "multi-page",
+      "expected": {
+        "supplier_name": "Bexley Workplace Direct",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "525.00",
+        "shipping": "25.00",
+        "tax": "0.00",
+        "total": "550.00",
+        "delivery_days": 6,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "pass",
+      "note": ""
+    },
+    {
+      "case_id": "ho-twopage-no-validity",
+      "category": "multi-page",
+      "expected": {
+        "supplier_name": "Corrigan Supply",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "525.00",
+        "shipping": "25.00",
+        "tax": "0.00",
+        "total": "550.00",
+        "delivery_days": 6,
+        "valid_until": null,
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "unknown",
+      "note": ""
+    },
+    {
+      "case_id": "ho-revised-pass",
+      "category": "revised-offer",
+      "expected": {
+        "supplier_name": "Ashdown Office Solutions",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "540.00",
+        "shipping": "50.00",
+        "tax": "0.00",
+        "total": "590.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "pass",
+      "note": ""
+    },
+    {
+      "case_id": "ho-revised-over",
+      "category": "revised-offer",
+      "expected": {
+        "supplier_name": "Kestrel Office Supply",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "570.00",
+        "shipping": "45.00",
+        "tax": "0.00",
+        "total": "615.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "fail",
+      "note": ""
+    },
+    {
+      "case_id": "ho-optional-warranty",
+      "category": "optional-charges",
+      "expected": {
+        "supplier_name": "Pryor & Webb Technology",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "525.00",
+        "shipping": "40.00",
+        "tax": "0.00",
+        "total": "565.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "pass",
+      "note": ""
+    },
+    {
+      "case_id": "ho-optional-express",
+      "category": "optional-charges",
+      "expected": {
+        "supplier_name": "Glenmore Supplies",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "525.00",
+        "shipping": "30.00",
+        "tax": "0.00",
+        "total": "555.00",
+        "delivery_days": 6,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "pass",
+      "note": ""
+    },
+    {
+      "case_id": "ho-eur",
+      "category": "ambiguous-currency",
+      "expected": {
+        "supplier_name": "Aurelia Handel GmbH",
+        "currency": "EUR",
+        "quantity": 30,
+        "subtotal": "510.00",
+        "shipping": "20.00",
+        "tax": "0.00",
+        "total": "530.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "fail",
+      "note": ""
+    },
+    {
+      "case_id": "ho-scanned-letter",
+      "category": "ocr",
+      "expected": {
+        "supplier_name": "Dunmore Peripherals",
+        "currency": "USD",
+        "quantity": 30,
+        "subtotal": "510.00",
+        "shipping": "25.00",
+        "tax": "0.00",
+        "total": "535.00",
+        "delivery_days": 5,
+        "valid_until": "2026-12-01",
+        "attr:connector": "USB-C"
+      },
+      "expected_decision": "unknown",
+      "note": "OCR text always needs human review"
+    }
+  ]
+}

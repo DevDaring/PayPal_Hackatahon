@@ -43,6 +43,7 @@ export function App() {
           <Route path="evaluation" element={<Evaluation />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="agent" element={<AgentMode />} />
+          <Route path="agent/:id" element={<AgentMode />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

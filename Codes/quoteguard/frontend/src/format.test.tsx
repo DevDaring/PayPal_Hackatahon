@@ -18,3 +18,12 @@ test("check badges never rely on colour alone", () => {
   expect(screen.getByText("Fail")).toBeInTheDocument();
   expect(screen.getByText("Unknown")).toBeInTheDocument();
 });
+
+import { csvSafe } from "./components/CompareStep";
+test("CSV export neutralises spreadsheet formulas from supplier text", () => {
+  expect(csvSafe("=HYPERLINK(\"http://x\")")).toBe("'=HYPERLINK(\"http://x\")");
+  expect(csvSafe("+1+1")).toBe("'+1+1");
+  expect(csvSafe("@SUM(A1)")).toBe("'@SUM(A1)");
+  expect(csvSafe("ClearWave Supplies")).toBe("ClearWave Supplies");
+  expect(csvSafe(570)).toBe("570");
+});

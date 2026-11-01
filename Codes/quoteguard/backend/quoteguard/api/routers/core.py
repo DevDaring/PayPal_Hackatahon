@@ -256,8 +256,14 @@ def chat(request_id: str, body: ChatIn, ctx: Ctx = Depends(require_ctx), db: Ses
 @router.post("/requests/{request_id}/analyze", tags=["workflow"])
 def reanalyze(request_id: str, ctx: Ctx = Depends(require_ctx), db: Session = Depends(get_db)):
     req = get_request(db, ctx.actor, request_id)
+    # Transient parser failures are retried; deterministic ones (encrypted, image-only without OCR) are not.
+    retried = 0
+    for d in db.execute(select(Document).where(Document.request_id == req.id, Document.error_code.in_(("PARSE_TIMEOUT", "PARSER_CRASHED", "PARSER_OUTPUT_INVALID")))).scalars():
+        d.status, d.error_code, d.error_message, d.extraction_started_at = "uploaded", None, None, None
+        retried += 1
     jobs.enqueue(db, "analyze_request", {"request_id": req.id}, dedupe_key=f"analyze:{req.id}")
-    return {"queued": True}
+    audit.event(db, workspace_id=req.workspace_id, request_id=req.id, stage="workflow", status="info", title="Analysis re-queued", detail=f"{retried} transiently failed document(s) retried; extracted documents are reused.", actor=ctx.actor.label)
+    return {"queued": True, "retried_documents": retried}
 
 
 def _events(db: Session, ws, request_id, after: int) -> list[dict]:

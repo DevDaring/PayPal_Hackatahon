@@ -110,6 +110,7 @@ def load_sample_quotes(db: Session, actor: Actor, request_id) -> list[Document]:
 FIXTURE_LABELS = {
     "missing_shipping": "Missing shipping cost", "unclear_currency": "Currency symbol only", "expired": "Expired validity",
     "contradictory": "Contradictory total", "malicious": "Embedded malicious instructions", "scanned": "Scanned image-only PDF (OCR)",
+    "negated_mic": "Microphone not included (negated spec)", "usbc_charging_only": "USB-C for charging only (conflicting spec)",
 }
 
 

@@ -190,6 +190,10 @@ def lab_fixtures(issue: date) -> dict[str, dict]:
         "expired": headset_quote("Old Pier Trading", "neutral", issue - timedelta(days=60), unit="17.00", sub="510.00", ship="20.00", tax="0.00", total="530.00", days=5, valid_days=14, quote_no="OPT-0099"),
         "contradictory": headset_quote("Summit Peripherals Inc.", "harbor", issue, unit="17.00", sub="510.00", ship="25.00", tax="0.00", total="525.00", days=5, quote_no="SPI-3310"),
         "scanned": headset_quote("Lantern Systems", "neutral", issue, unit="17.00", sub="510.00", ship="30.00", tax="0.00", total="540.00", days=5, quote_no="LS-4410"),
+        "negated_mic": headset_quote("Westmark Office Supply", "clearwave", issue, unit="17.00", sub="510.00", ship="25.00", tax="0.00", total="535.00", days=5, quote_no="WOS-2207",
+                                     product="Product: USB-C stereo headset (over-ear, wired)", notes=["Note: microphone not included; boom microphone sold separately at $6.00 each."]),
+        "usbc_charging_only": headset_quote("Brookline Devices", "harbor", issue, unit="17.00", sub="510.00", ship="25.00", tax="0.00", total="535.00", days=5, quote_no="BD-5531",
+                                            product="Product: Wireless stereo headset with boom microphone", notes=["Connectivity: USB-C charging only; audio via USB-A dongle."]),
     }
 
 

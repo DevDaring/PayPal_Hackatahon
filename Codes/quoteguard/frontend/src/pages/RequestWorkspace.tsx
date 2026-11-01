@@ -105,6 +105,7 @@ export default function RequestWorkspace() {
           <h1 className="mt-1.5 font-display text-[32px] leading-tight text-ink md:text-[38px]">{r.title}</h1>
           {r.budget && <p className="text-sm text-muted">{r.quantity} units · budget {money(r.budget, r.currency)} · deliver by {r.deadline}</p>}
         </div>
+        <Link to={`/agent/${id}`} className="hidden self-start rounded-xl border border-line-strong bg-surface px-3 py-2 text-[13px] font-medium text-ink-2 hover:bg-sunken md:inline-flex">Agent view</Link>
         <button onClick={() => setActivity(!showActivity)} aria-pressed={showActivity} className="hidden items-center gap-2 self-start rounded-xl border border-line-strong bg-surface px-3 py-2 text-[13px] font-medium text-ink-2 hover:bg-sunken md:inline-flex">
           <Activity className="size-4 text-teal" aria-hidden />{showActivity ? "Hide" : "Show"} live activity{r.workflow?.status === "running" && <span className="size-2 rounded-full bg-teal-bright pulse-ring" aria-label="running" />}
         </button>

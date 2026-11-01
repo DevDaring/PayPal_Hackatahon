@@ -10,7 +10,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from ..money import SUPPORTED_CHECKOUT_CURRENCIES, fmt
-from .requirements import Criterion, RequirementSpec
+from .attributes import assess
+from .requirements import RequirementSpec
 
 POLICY_NAME = "quoteguard-default"
 POLICY_VERSION = 1
@@ -42,6 +43,7 @@ class QuoteFacts:
     unit_price: Decimal | None = None
     scalable_pricing: bool = False
     flat_shipping: bool = False
+    attribute_sources: dict = field(default_factory=dict)  # attribute key -> cited source sentence
 
 
 @dataclass
@@ -101,23 +103,6 @@ def arithmetic(f: QuoteFacts) -> tuple[Decimal | None, str]:
 
 def _money(d: Decimal | None, cur: str | None) -> str:
     return "unknown" if d is None else f"{cur or ''} {fmt(d)}".strip()
-
-
-def _match_attribute(c: Criterion, attributes: dict) -> tuple[str, str]:
-    raw = attributes.get(c.key)
-    if raw is None or str(raw).strip() == "":
-        return "unknown", f"The quote does not state its {c.key.replace('_', ' ')}; {c.label} cannot be confirmed."
-    value = str(raw).strip().lower()
-    wanted = {s.lower() for s in c.synonyms} | {c.expected.lower()}
-    if c.expected.lower() == "yes":
-        if value in {"yes", "true", "included"} or any(w in value for w in wanted if w not in {"yes"}):
-            return "pass", f"Quote states: {raw}."
-        if value in {"no", "false", "none"}:
-            return "fail", f"Quote states no {c.key.replace('_', ' ')}."
-        return "unknown", f"Quote value '{raw}' is ambiguous for {c.label}."
-    if any(w == value or w in value for w in wanted):
-        return "pass", f"Quote states {raw}."
-    return "fail", f"Quote states {raw}; requirement is {c.expected}."
 
 
 def evaluate(spec: RequirementSpec, f: QuoteFacts, order_date: date, quantity_override: int | None = None) -> QuoteOutcome:
@@ -183,7 +168,7 @@ def evaluate(spec: RequirementSpec, f: QuoteFacts, order_date: date, quantity_ov
         checks.append(Check("validity", "Quote still valid", "pass", f"Valid until {f.valid_until.isoformat()}.", ["valid_until"]))
 
     for c in spec.mandatory:
-        status, detail = _match_attribute(c, f.attributes or {})
+        status, detail = assess(c, (f.attributes or {}).get(c.key), (f.attribute_sources or {}).get(c.key))
         checks.append(Check(f"attr:{c.key}", c.label, status, detail, [f"attr:{c.key}"]))
 
     statuses = {c.status for c in checks}

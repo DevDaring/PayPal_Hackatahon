@@ -136,6 +136,9 @@ def version_from_extraction(db: Session, quote: Quote, doc: Document, ex: Extrac
         extraction_method=("ocr+" if ocr else "") + meta["method"], model=meta.get("model"), prompt_version=meta.get("prompt_version"), reason="extracted",
         created_at=timeutil.now(), issues=[], needs_review=ocr or critical_issue,
     )
+    for k, c in ex.attributes.items():
+        if c.value is not None and c.source_text:
+            qv.attributes[f"_src_{k}"] = c.source_text[:400]  # evidence sentence is re-assessed by the policy
     qv.attributes["_scalable_pricing"] = "yes" if ex.pricing_scales_with_quantity else None
     qv.attributes["_flat_shipping"] = "yes" if ex.flat_shipping else None
     if ocr:
@@ -319,6 +322,7 @@ def correct(db: Session, actor: Actor, quote_id, field: str, new_value, note: st
         key = field[5:]
         original = old.attributes.get(key)
         new.attributes[key] = None if new_value in (None, "") else str(new_value)[:80]
+        new.attributes.pop(f"_src_{key}", None)  # a human correction replaces the document sentence
     else:
         original = getattr(old, "stated_total" if field == "total" else field)
         if field in ("unit_price", "subtotal", "shipping", "tax", "discount", "total"):

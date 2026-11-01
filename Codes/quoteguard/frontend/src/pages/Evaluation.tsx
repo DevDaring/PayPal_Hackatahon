@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BarChart3, Download, Play, Search } from "lucide-react";
 import { api, errorText } from "../lib/api";
+import { csvSafe } from "../components/CompareStep";
 import { dateTime, FIELD_LABEL } from "../lib/format";
 import { useRoles } from "../lib/session";
 import { Badge, Button, Callout, Card, cx, Empty, PageHeader, SectionTitle, Skeleton, Stat } from "../components/ui";
@@ -49,7 +50,7 @@ export default function Evaluation() {
           </Card>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat label="Decision agreement" value={pct(s.decision_agreement.rate)} hint={`${s.decision_agreement.agree}/${s.decision_agreement.total} cases match the labelled pass/fail/unknown`} tone="teal" icon={<BarChart3 className="size-4" aria-hidden />} />
-            <Stat label="Unsafe payments blocked" value={`${s.unsafe_payment_attempts.blocked}/${s.unsafe_payment_attempts.total}`} hint="Cases labelled not-payable that were not payment-eligible" tone="teal" />
+            <Stat label="Non-payable cases rejected by policy" value={`${s.unsafe_payment_attempts.blocked}/${s.unsafe_payment_attempts.total}`} hint="Policy-level result (no PayPal call per case). Payment-boundary behaviour is covered by the backend test suite." tone="teal" />
             <Stat label="False blocking" value={`${s.false_blocking.blocked}/${s.false_blocking.total}`} hint="Payable cases that were wrongly blocked" tone={s.false_blocking.blocked ? "amber" : "navy"} />
             <Stat label="Evidence references valid" value={pct(s.evidence.rate)} hint={`${s.evidence.correct}/${s.evidence.checked} cited lines found on the cited page`} />
           </div>
@@ -110,7 +111,7 @@ function CaseGrid({ cases, runId }: { cases: any[]; runId: string }) {
           <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted" aria-hidden />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter cases…" aria-label="Filter evaluation cases" className="h-9 w-64 rounded-lg border border-line-strong bg-surface pl-8 pr-3 text-sm focus:border-teal focus:outline-none" />
         </label>
-        <Button size="sm" variant="secondary" icon={<Download className="size-3.5" aria-hidden />} onClick={() => ref.current?.api.exportDataAsCsv({ fileName: `quoteguard-eval-${runId.slice(0, 8)}.csv` })}>Export CSV</Button>
+        <Button size="sm" variant="secondary" icon={<Download className="size-3.5" aria-hidden />} onClick={() => ref.current?.api.exportDataAsCsv({ fileName: `quoteguard-eval-${runId.slice(0, 8)}.csv`, processCellCallback: (p) => csvSafe(p.value) })}>Export CSV</Button>
       </div>
       <AgGridReact ref={ref} theme={theme} rowData={rows} columnDefs={cols} quickFilterText={q} domLayout="autoHeight" tooltipShowDelay={300}
         defaultColDef={{ sortable: true, resizable: true, flex: 1, floatingFilter: true, filter: true }}

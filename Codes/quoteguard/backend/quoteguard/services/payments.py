@@ -242,8 +242,35 @@ def _validate_order_for_capture(op: PaymentOperation, s: dict) -> str | None:
         return "Order is not associated with this payment operation."
     if s["amount"] != fmt(op.amount) or s["currency"] != op.currency:
         return f"Order amount {s['currency']} {s['amount']} differs from approved {op.currency} {fmt(op.amount)}."
-    if op.adapter == "sandbox" and s["payee_merchant_id"] and s["payee_merchant_id"] != op.merchant_id:
+    if not s.get("payee_merchant_id"):
+        # Absence is not a match: without a reported payee the order cannot be verified automatically.
+        return "PayPal did not report the order's payee; manual verification is required before any capture."
+    if s["payee_merchant_id"] != op.merchant_id:
         return f"Order payee {s['payee_merchant_id']} differs from the approved merchant {op.merchant_id}."
+    return None
+
+
+def _authorize_recovery_capture(db_factory: DBFactory, op_uuid, s: dict) -> dict | None:
+    """Before recovery issues a NEW capture: the same provider-order and approval checks as normal capture.
+
+    Returns an op view if capture must not proceed (state recorded), or None when it may proceed.
+    The original operation and its PayPal-Request-Id are kept either way; nothing is restarted.
+    """
+    with db_factory() as db:
+        _, appr, op = _lock_op_chain(db, None, op_uuid)
+        problem = _validate_order_for_capture(op, s)
+        if problem:
+            op.state, op.last_error_code, op.last_error_message, op.updated_at = "failed", "ORDER_MISMATCH", problem + " No capture was made during recovery.", timeutil.now()
+            _event(db, op, "blocked", "Recovery blocked: provider order does not match the approved payment", problem, tool="payment_guard")
+            return op_json(op, db)
+        try:
+            approvals.revalidate(db, appr, allow_consumed=True)
+        except AppError as e:
+            op.state, op.last_error_code, op.updated_at = "canceled", e.code, timeutil.now()
+            op.last_error_message = f"No capture was made during recovery: {e.message} The buyer-approved PayPal order was left uncaptured; a fresh approval is required."
+            _event(db, op, "blocked", f"Recovery stopped before capture: {e.code}", op.last_error_message, tool="snapshot_guard")
+            return op_json(op, db)
+        _event(db, op, "info", "Recovery re-checked authority before retrying capture", "Approval, amount, currency, payee and operation match; retrying with the same PayPal-Request-Id.", tool="payment_guard")
     return None
 
 
@@ -323,6 +350,14 @@ def _apply_capture(db_factory: DBFactory, op_id, body: dict, *, res: ProviderRes
         op.provider_order_status = s["status"]
         if cap is None:
             return op_json(op, db)
+        if call == "get_order":
+            # A capture already exists: record it even if the approval expired since, but only for our order and payee.
+            problem = _validate_order_for_capture(op, s)
+            if problem and not (cap["amount"] == fmt(op.amount) and s["custom_id"] == str(op.id) and not s.get("payee_merchant_id")):
+                op.state, op.provider_capture_id, op.provider_capture_status = "reconciling", cap["id"], cap["status"]
+                op.last_error_code, op.last_error_message = "MANUAL_REVIEW", f"Capture {cap['id']} exists but needs manual review: {problem}"
+                _event(db, op, "blocked", "Existing capture needs manual review", op.last_error_message)
+                return op_json(op, db)
         if cap["amount"] != fmt(op.amount) or cap["currency"] != op.currency:
             op.state, op.last_error_code, op.last_error_message = "reconciling", "CAPTURE_AMOUNT_MISMATCH", f"Captured {cap['currency']} {cap['amount']} differs from approved {op.currency} {fmt(op.amount)}; manual review needed."
             _event(db, op, "blocked", "Captured amount differs from approval — manual review", op.last_error_message)
@@ -372,6 +407,9 @@ def reconcile(db_factory: DBFactory, op_id: str, source: str = "worker") -> dict
     if s["captures"]:
         return _apply_capture(db_factory, op_uuid, got.body, res=got, call="get_order")
     if s["status"] == "APPROVED" and state in ("reconciling", "capture_pending"):
+        blocked = _authorize_recovery_capture(db_factory, op_uuid, s)
+        if blocked is not None:
+            return blocked
         try:
             res = provider.capture_order(order_id, cap_req)
         except ProviderError as e:
