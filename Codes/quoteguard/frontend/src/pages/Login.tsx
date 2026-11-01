@@ -95,7 +95,7 @@ function ProductPreview() {
 
 const PROOF = [
   { value: "40/44", label: "document-fraud attacks caught, 0 false alarms on 38 honest cases" },
-  { value: "3", label: "human consents the agent can never give itself" },
+  { value: "0.818", label: "AUC catching real cartels in countries our model never saw — best of 5 methods" },
   { value: "$0", label: "real money — PayPal Sandbox, synthetic quotes" },
 ];
 

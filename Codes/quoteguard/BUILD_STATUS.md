@@ -22,7 +22,8 @@ Legend: ✅ implemented and verified · 🟡 implemented, verification needs a c
 | Signed webhook handling (store → verify → dedupe → lookup) | ✅ | test 13; live `CHECKOUT.ORDER.APPROVED` and `PAYMENT.CAPTURE.COMPLETED` deliveries signature-verified and applied |
 | Comparison, approval, checkout and receipt screens | ✅ | e2e screenshots |
 | Three reproducible sample quotations + extra fixtures | ✅ | `fixtures/` |
-| Tests for payment and authorization boundaries | ✅ | 72 backend tests |
+| Tests for payment and authorization boundaries | ✅ | 75 backend tests |
+| Research: cross-market cartel-pattern model (real data, leave-one-market-out, paired bootstrap) shipped in Integrity Radar | ✅ | `research/bid_rigging/`, 3 tests, Demo Lab `rotating_cartel`, live e2e |
 | Document integrity: hidden-revision recovery, white-box patches, retyped amounts, provenance graph across suppliers, bid screens; `integrity` policy check | ✅ | 8 integrity tests, Demo Lab `edited_bill` + `cover_quotes`, benchmark 82 cases (`run-integrity-bench`) |
 | Negated / conditional / conflicting specifications cannot pass (value **and** cited sentence assessed) | ✅ | policy + end-to-end document → approval tests |
 | Recovery enforces the same authority & provider-order checks as capture; existing captures still reconciled after expiry | ✅ | 8 recovery tests |

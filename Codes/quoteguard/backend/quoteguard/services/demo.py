@@ -156,6 +156,7 @@ SCENARIOS = {
     "lost_response": "Provider timeout after a successful capture",
     "edited_bill": "Supplier PDF edited to fit the budget",
     "cover_quotes": "Fabricated competing quotes",
+    "rotating_cartel": "Suppliers taking turns to win",
 }
 
 
@@ -367,6 +368,12 @@ def _integrity_attack(actor: Actor, rec: _Recorder, rid: str, qid: str, *, what:
         rec.step("Counterfactual: the same policy without document forensics", "failed" if w0.payment_eligible else "info",
                  f"{w0.supplier} {spec.currency} {w0.verified_total or '—'}: mandatory checks {w0.mandatory_status}, payment eligible {w0.payment_eligible}, rank {w0.compliant_rank or '—'}. {what}")
         chk = next(c for c in w1.checks if c.key == "integrity")
+        cm = (report.get("cartel_model") or {}).get("groups") or []
+        if cm:
+            g = cm[0]
+            rec.step("Cartel-pattern model (trained on proven cartel cases)", "blocked" if g["probability"] >= 0.5 else "info",
+                     f"{', '.join(g['names'])}: {g['joint_tenders']} joint purchases, winners {' → '.join(reversed(g['winner_names']))}; score {g['probability']:.2f} (threshold 0.50).",
+                     {"cartel": g})
         rec.step("With forensics: Document integrity check", "blocked" if chk.status != "pass" else "failed", f"{chk.status.upper()} — {chk.detail}")
         try:
             ap = _approver(db, actor)
@@ -401,6 +408,27 @@ def _scn_cover_quotes(actor: Actor, rec: _Recorder):
     ok, _ = _integrity_attack(actor, rec, rid, qid, what="Without forensics Pinecrest looks like the clear winner of a three-way competition.")
     return ("blocked_as_expected" if ok else "not_blocked"), ("The three quotes share an author, an original file and a phone number; the staged competition is held for review."
                                                              if ok else "A control did not hold.")
+
+
+def _scn_rotating_cartel(actor: Actor, rec: _Recorder):
+    tenders = fixtures.rotating_cartel_tenders(timeutil.local_date("UTC"))
+    rec.step("Attack", "info", "Kestrel, Larchmont and Mosswood have quoted together for months. Every quote is compliant and under budget, every PDF is clean — "
+             "but the bids are always tight, the winner always slightly apart, and the winner rotates. That is the shape of a bid-rigging cartel.")
+    for n, tender in enumerate(tenders[:-1], 1):  # earlier purchases in this workspace, read by the deterministic extractor
+        with session_scope() as db:
+            req = requests_svc.create(db, actor, SAMPLE_TEXT, title=f"[Demo Lab] Earlier headset purchase {n} of {len(tenders) - 1}", lab_scenario="rotating_cartel")
+            requests_svc.confirm(db, actor, req.id, SAMPLE_SPEC, note="Demo Lab history")
+            ids = [str(documents.upload(db, actor, req.id, d["filename"], d["pdf"], "application/pdf", is_sample=True,
+                                        supplier_id=_supplier(db, actor.workspace_id, d["supplier"]).id, confirmed_by=SAMPLE_CONFIRMER, enqueue=False).id) for d in tender]
+        for i in ids:
+            documents.process(session_scope, i, force_rules=True)
+        rec.step(f"Earlier purchase {n}", "info", " · ".join(f"{d['supplier']} ${d['total']}" for d in sorted(tender, key=lambda d: float(d["total"]))) + f" — {min(tender, key=lambda d: float(d['total']))['supplier']} wins.")
+    current = tenders[-1]
+    rid, qid = _lab_request(actor, "rotating_cartel", rec, docs=current, lab_supplier=min(current, key=lambda d: float(d["total"]))["supplier"])
+    ok, report = _integrity_attack(actor, rec, rid, qid, what="Without the history model this purchase is unremarkable: compliant, cheapest, forensically clean.")
+    g = (report.get("cartel_model") or {}).get("groups") or [{}]
+    return ("blocked_as_expected" if ok else "not_blocked"), (f"No single document is wrong, but across {g[0].get('joint_tenders', '?')} purchases the group's bids score {g[0].get('probability', 0):.2f} "
+                                                             "on the cartel-pattern model trained on proven cartel cases; the purchase is held for review." if ok else "A control did not hold.")
 
 
 def _sim_approved_checkout(actor: Actor, rec: _Recorder, scenario: str) -> tuple[str, str]:

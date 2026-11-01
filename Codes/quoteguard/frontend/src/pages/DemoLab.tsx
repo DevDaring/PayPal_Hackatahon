@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Archive, Ban, Check, CircleAlert, CopyCheck, FileSearch, FileWarning, FlaskConical, Info, Loader2, Network, Play, Shuffle, TimerOff, X } from "lucide-react";
+import { Archive, Ban, Check, CircleAlert, CopyCheck, FileSearch, FileWarning, FlaskConical, Info, Loader2, Network, Play, Repeat, Shuffle, TimerOff, X } from "lucide-react";
 import { api, errorText, post } from "../lib/api";
 import { dateTime } from "../lib/format";
 import { Badge, Button, Callout, Card, cx, PageHeader, Skeleton } from "../components/ui";
@@ -13,6 +13,7 @@ const META: Record<string, { icon: any; blurb: string; expect: string }> = {
   double_click: { icon: CopyCheck, blurb: "Five simultaneous ‘Pay’ clicks, then five simultaneous capture requests.", expect: "One payment operation, one provider capture" },
   lost_response: { icon: TimerOff, blurb: "The provider performs the capture but its response is discarded, as if the network dropped it.", expect: "Payment becomes ‘reconciling’, then recovers by lookup" },
   edited_bill: { icon: FileSearch, blurb: "Northstar's real $640 quote is opened in a PDF editor and changed to $540 so it fits the $600 budget. The page looks untouched and the arithmetic adds up.", expect: "Original $640 recovered from the file's hidden revision; approval blocked" },
+  rotating_cartel: { icon: Repeat, blurb: "Three suppliers have quoted together for months: always tight bids, the winner always slightly apart, and the winner rotating. Every PDF is clean and every quote compliant.", expect: "Cartel-pattern model (trained on proven cartels) scores the group's history; purchase held for review" },
   cover_quotes: { icon: Network, blurb: "The only quote under budget comes with two ‘competitors’ that its own salesperson wrote, to make the choice look competitive.", expect: "Shared author, file and phone exposed; staged competition held" },
 };
 const VERDICT: Record<string, { label: string; tone: "good" | "bad" | "warn" }> = {

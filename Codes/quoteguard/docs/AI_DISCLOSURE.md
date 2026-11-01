@@ -10,6 +10,7 @@
 | Q&A side panel grounded in one request's evidence | same | same |
 | OCR of image-only PDFs (optional) | same model, vision input | `OCR_PROVIDER`, `OCR_MODEL` |
 | Integrity investigator memo (explains forensic findings; never decides) | same | same |
+| Cartel-pattern score for recurring supplier groups | **our own statistical model** (`research/cartel_model_v1.json`: logistic regression on market-relative screens, sign-constrained), trained on public cartel data (Imhof & Wallimann 2021, CC BY 4.0) | not an LLM; retrain with `research/bid_rigging/` |
 
 Until 1 November 2026 the live demo used `gemini-2.5-flash` through Gemini's OpenAI-compatible endpoint; the evaluation runs from that period are kept and labelled with that model. **Document integrity verdicts use no model at all** — they come from deterministic forensics (`documents/integrity.py`). The memo is discarded if it states any number that is not in the findings.
 

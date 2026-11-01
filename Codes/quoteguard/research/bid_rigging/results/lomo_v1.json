@@ -1,0 +1,275 @@
+[
+ {
+  "target": "JP",
+  "train": "CH+IT",
+  "method": "B1 screen rule (RD>1 & CV<5%)",
+  "auc": 0.639,
+  "auc_ci": [
+   0.612,
+   0.664
+  ],
+  "bal_acc": 0.639,
+  "n": 2000,
+  "cartel_rate": 0.104
+ },
+ {
+  "target": "JP",
+  "train": "CH+IT",
+  "method": "B2 RF on screens (Huber & Imhof 2019)",
+  "auc": 0.638,
+  "auc_ci": [
+   0.607,
+   0.669
+  ],
+  "bal_acc": 0.627,
+  "n": 2000,
+  "cartel_rate": 0.104
+ },
+ {
+  "target": "JP",
+  "train": "CH+IT",
+  "method": "B3 lasso logit (Imhof & Wallimann 2021)",
+  "auc": 0.627,
+  "auc_ci": [
+   0.592,
+   0.659
+  ],
+  "bal_acc": 0.507,
+  "n": 2000,
+  "cartel_rate": 0.104
+ },
+ {
+  "target": "JP",
+  "train": "CH+IT",
+  "method": "B4 boosted trees on screens",
+  "auc": 0.682,
+  "auc_ci": [
+   0.649,
+   0.715
+  ],
+  "bal_acc": 0.583,
+  "n": 2000,
+  "cartel_rate": 0.104
+ },
+ {
+  "target": "JP",
+  "train": "CH+IT",
+  "method": "Ours: market-relative + monotone boosting",
+  "auc": 0.785,
+  "auc_ci": [
+   0.753,
+   0.819
+  ],
+  "bal_acc": 0.728,
+  "n": 2000,
+  "cartel_rate": 0.104
+ },
+ {
+  "target": "JP",
+  "train": "CH+IT",
+  "method": "Ablation: market-relative + RF",
+  "auc": 0.771,
+  "auc_ci": [
+   0.735,
+   0.803
+  ],
+  "bal_acc": 0.539,
+  "n": 2000,
+  "cartel_rate": 0.104
+ },
+ {
+  "target": "JP",
+  "train": "CH+IT",
+  "method": "Ablation: raw + monotone boosting",
+  "auc": 0.706,
+  "auc_ci": [
+   0.677,
+   0.735
+  ],
+  "bal_acc": 0.572,
+  "n": 2000,
+  "cartel_rate": 0.104
+ },
+ {
+  "target": "CH",
+  "train": "JP+IT",
+  "method": "B1 screen rule (RD>1 & CV<5%)",
+  "auc": 0.829,
+  "auc_ci": [
+   0.81,
+   0.848
+  ],
+  "bal_acc": 0.829,
+  "n": 1542,
+  "cartel_rate": 0.581
+ },
+ {
+  "target": "CH",
+  "train": "JP+IT",
+  "method": "B2 RF on screens (Huber & Imhof 2019)",
+  "auc": 0.766,
+  "auc_ci": [
+   0.744,
+   0.791
+  ],
+  "bal_acc": 0.553,
+  "n": 1542,
+  "cartel_rate": 0.581
+ },
+ {
+  "target": "CH",
+  "train": "JP+IT",
+  "method": "B3 lasso logit (Imhof & Wallimann 2021)",
+  "auc": 0.824,
+  "auc_ci": [
+   0.803,
+   0.844
+  ],
+  "bal_acc": 0.545,
+  "n": 1542,
+  "cartel_rate": 0.581
+ },
+ {
+  "target": "CH",
+  "train": "JP+IT",
+  "method": "B4 boosted trees on screens",
+  "auc": 0.759,
+  "auc_ci": [
+   0.736,
+   0.782
+  ],
+  "bal_acc": 0.683,
+  "n": 1542,
+  "cartel_rate": 0.581
+ },
+ {
+  "target": "CH",
+  "train": "JP+IT",
+  "method": "Ours: market-relative + monotone boosting",
+  "auc": 0.738,
+  "auc_ci": [
+   0.715,
+   0.763
+  ],
+  "bal_acc": 0.604,
+  "n": 1542,
+  "cartel_rate": 0.581
+ },
+ {
+  "target": "CH",
+  "train": "JP+IT",
+  "method": "Ablation: market-relative + RF",
+  "auc": 0.685,
+  "auc_ci": [
+   0.659,
+   0.709
+  ],
+  "bal_acc": 0.516,
+  "n": 1542,
+  "cartel_rate": 0.581
+ },
+ {
+  "target": "CH",
+  "train": "JP+IT",
+  "method": "Ablation: raw + monotone boosting",
+  "auc": 0.727,
+  "auc_ci": [
+   0.703,
+   0.748
+  ],
+  "bal_acc": 0.645,
+  "n": 1542,
+  "cartel_rate": 0.581
+ },
+ {
+  "target": "IT",
+  "train": "JP+CH",
+  "method": "B1 screen rule (RD>1 & CV<5%)",
+  "auc": 0.633,
+  "auc_ci": [
+   0.62,
+   0.646
+  ],
+  "bal_acc": 0.633,
+  "n": 20251,
+  "cartel_rate": 0.073
+ },
+ {
+  "target": "IT",
+  "train": "JP+CH",
+  "method": "B2 RF on screens (Huber & Imhof 2019)",
+  "auc": 0.739,
+  "auc_ci": [
+   0.723,
+   0.752
+  ],
+  "bal_acc": 0.575,
+  "n": 20251,
+  "cartel_rate": 0.073
+ },
+ {
+  "target": "IT",
+  "train": "JP+CH",
+  "method": "B3 lasso logit (Imhof & Wallimann 2021)",
+  "auc": 0.844,
+  "auc_ci": [
+   0.831,
+   0.857
+  ],
+  "bal_acc": 0.772,
+  "n": 20251,
+  "cartel_rate": 0.073
+ },
+ {
+  "target": "IT",
+  "train": "JP+CH",
+  "method": "B4 boosted trees on screens",
+  "auc": 0.747,
+  "auc_ci": [
+   0.732,
+   0.76
+  ],
+  "bal_acc": 0.629,
+  "n": 20251,
+  "cartel_rate": 0.073
+ },
+ {
+  "target": "IT",
+  "train": "JP+CH",
+  "method": "Ours: market-relative + monotone boosting",
+  "auc": 0.752,
+  "auc_ci": [
+   0.74,
+   0.765
+  ],
+  "bal_acc": 0.703,
+  "n": 20251,
+  "cartel_rate": 0.073
+ },
+ {
+  "target": "IT",
+  "train": "JP+CH",
+  "method": "Ablation: market-relative + RF",
+  "auc": 0.767,
+  "auc_ci": [
+   0.755,
+   0.779
+  ],
+  "bal_acc": 0.72,
+  "n": 20251,
+  "cartel_rate": 0.073
+ },
+ {
+  "target": "IT",
+  "train": "JP+CH",
+  "method": "Ablation: raw + monotone boosting",
+  "auc": 0.841,
+  "auc_ci": [
+   0.828,
+   0.853
+  ],
+  "bal_acc": 0.65,
+  "n": 20251,
+  "cartel_rate": 0.073
+ }
+]

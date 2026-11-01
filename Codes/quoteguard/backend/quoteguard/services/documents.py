@@ -38,7 +38,7 @@ def safe_filename(name: str) -> str:
 
 # ------------------------------------------------------------------ upload ----------
 def upload(db: Session, actor: Actor, request_id, filename: str, data: bytes, content_type: str | None, *, is_sample: bool = False,
-           supplier_id: uuid.UUID | None = None, confirmed_by: str | None = None) -> Document:
+           supplier_id: uuid.UUID | None = None, confirmed_by: str | None = None, enqueue: bool = True) -> Document:
     actor.require("requester", "admin")
     req = get_request(db, actor, request_id, for_update=True)
     if req.status in ("canceled", "superseded"):
@@ -56,7 +56,8 @@ def upload(db: Session, actor: Actor, request_id, filename: str, data: bytes, co
     doc.supplier_confirmed_by = confirmed_by
     if req.status in ("ready_for_review", "needs_clarification"):
         req.status = "analyzing"
-    jobs.enqueue(db, "analyze_request", {"request_id": req.id}, dedupe_key=f"analyze:{req.id}", delay_seconds=1)
+    if enqueue:  # callers that process synchronously (Demo Lab history) opt out of the background analysis
+        jobs.enqueue(db, "analyze_request", {"request_id": req.id}, dedupe_key=f"analyze:{req.id}", delay_seconds=1)
     audit.record(db, "document.uploaded", workspace_id=actor.workspace_id, actor_id=actor.user_id, principal_id=actor.principal_id, object_type="document", object_id=doc.id, request_id=req.id,
                  meta={"sha256": digest, "pages": pages, "sample": is_sample, "filename": doc.filename})
     audit.event(db, workspace_id=actor.workspace_id, request_id=req.id, stage="document", status="info", title=f"Uploaded {doc.filename}",

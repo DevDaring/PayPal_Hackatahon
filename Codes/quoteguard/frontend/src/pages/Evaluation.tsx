@@ -29,6 +29,7 @@ export default function Evaluation() {
       <PageHeader eyebrow="Evaluation" title="Measured, not claimed" subtitle="Labelled synthetic quotations. Expected labels live in a separate manifest the model never sees; every run is kept, including the bad ones."
         actions={isAdmin ? <><Button variant="secondary" loading={start.isPending && start.variables === "rules"} onClick={() => start.mutate("rules")}>Run deterministic baseline</Button><Button loading={start.isPending && start.variables === "llm"} onClick={() => start.mutate("llm")} icon={<Play className="size-4" aria-hidden />}>Run with AI model</Button></> : undefined} />
       <IntegrityBench />
+      <ResearchCard />
       <h2 className="mb-3 mt-8 font-display text-[28px] text-ink">Quote extraction: rules vs. AI</h2>
       <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Dataset">
         {[["quoteguard-holdout-v1", "Holdout · unfamiliar layouts (26)", "Built independently; labels frozen before any run"], ["quoteguard-eval-v1", "Development set (24)", "Template family the parser was written against"]].map(([k, l, h]) => (
@@ -217,6 +218,37 @@ function IntegrityBench() {
         </table>
         {s.missed.length > 0 && <p className="mt-3 text-[12.5px] text-ink-2"><b>Missed ({s.missed.length}):</b> {s.missed.join(", ")} — a cleanly re-saved edit leaves no structural trace, and an invented competitor with fresh, unrelated metadata shares nothing to link. These limits are why approval also binds the payment to the configured PayPal merchant.</p>}
         <p className="mt-2 text-[11.5px] text-muted">Synthetic documents; the detectors and the attack generator were written by the same team, so treat this as a regression benchmark, not a field accuracy estimate. Run {dateTime(r.finished_at)}{r.code_revision ? ` · code ${String(r.code_revision).slice(0, 7)}` : ""}.</p>
+      </div>
+    </Card>
+  );
+}
+
+function ResearchCard() {
+  const q = useQuery<any>({ queryKey: ["eval-research"], queryFn: () => api("/evaluation/research") });
+  if (!q.data) return null;
+  const r = q.data;
+  const best = (m: string) => Math.max(...r.rows.map((x: any) => x.auc[m]));
+  return (
+    <Card className="mt-6 overflow-hidden" data-testid="research-card">
+      <div className="border-b border-line p-5">
+        <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-teal">Our research · {r.version}</div>
+        <div className="mt-0.5 font-display text-[26px] leading-tight text-ink">Detecting bid-rigging in a market the model has never seen</div>
+        <p className="mt-1 max-w-3xl text-[13px] text-muted">Real cartel data: {Object.entries(r.data.groups).map(([k, v]) => `${k} ${Number(v).toLocaleString()}`).join(" · ")} bidder groups with proven cartel periods ({r.data.license}). {r.protocol}</p>
+      </div>
+      <div className="overflow-x-auto p-5">
+        <table className="w-full min-w-[620px] text-[13px]">
+          <thead><tr className="text-left text-[11.5px] uppercase tracking-wider text-muted"><th className="pb-2 font-semibold">Method (held-out market AUC)</th>{["JP", "CH", "IT"].map((m) => <th key={m} className="pb-2 text-right font-semibold">{{ JP: "Japan", CH: "Switzerland", IT: "Italy" }[m]}</th>)}<th className="pb-2 text-right font-semibold">Mean</th></tr></thead>
+          <tbody>
+            {r.rows.map((x: any) => (
+              <tr key={x.method} className={cx("border-t border-line", x.ours && "bg-teal-soft/50 font-semibold")}>
+                <td className="py-2 pr-3 text-ink">{x.method}</td>
+                {["JP", "CH", "IT"].map((m) => <td key={m} className={cx("tnum py-2 text-right", x.auc[m] === best(m) ? "text-teal-strong" : "text-ink-2")}>{x.auc[m].toFixed(3)}{!x.ours && x.vs_ours[m].ci95[0] > 0 && <span className="ml-1 text-[10px] text-teal" title={`ours better: +${x.vs_ours[m].diff} (95% CI ${x.vs_ours[m].ci95.join(" to ")})`}>▲</span>}</td>)}
+                <td className="tnum py-2 text-right text-ink">{x.mean_auc.toFixed(3)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="mt-2 text-[12px] text-ink-2">▲ = ours significantly better (paired bootstrap, 95% CI excludes 0): 9 of 12 comparisons; the other 3 are statistical ties, none worse. Baselines are re-implemented on the same features in the style of each paper, not exact replications. The model runs inside Integrity Radar for supplier groups seen in 3+ purchases.</p>
       </div>
     </Card>
   );

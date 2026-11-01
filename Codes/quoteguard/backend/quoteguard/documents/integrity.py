@@ -26,7 +26,7 @@ import statistics
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-INTEGRITY_VERSION = "integrity-v1"
+INTEGRITY_VERSION = "integrity-v2"
 _MONEY = re.compile(r"[$€£]\s?\d[\d,]*(?:\.\d{2})?|\b\d[\d,]*\.\d{2}\b")
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _PHONE = re.compile(r"(?:\b(?:tel|telephone|phone|ph|mobile|cell|call|fax|whatsapp)\b[.:#\s]*|(?=\+))(\+?[\d(][\d\s().-]{8,22}\d)", re.I)
@@ -233,7 +233,12 @@ def pair_signals(a: DocInput, b: DocInput) -> list[dict]:
     return sig
 
 
-def analyze(docs: list[DocInput], member_names: list[str]) -> dict:
+def supplier_key(name: str) -> str:
+    return _norm_name(re.sub(r"\s*\(lab copy \d+\)", "", name or ""))
+
+
+def analyze(docs: list[DocInput], member_names: list[str], history: list[dict[str, float]] | None = None) -> dict:
+    """history: past tenders in this workspace as {supplier_key: total}; enables the recurring-group cartel model."""
     n = [0]
 
     def next_id():
@@ -285,6 +290,23 @@ def analyze(docs: list[DocInput], member_names: list[str]) -> dict:
         findings.append(f)
         clusters.append({"quotes": members, "level": level, "finding": f.id})
     screens = bid_screens([d.total for d in docs if d.total is not None])
+    # Recurring supplier groups: the cartel-pattern model trained on proven cartel cases (research/cartel.py).
+    from ..research import cartel
+
+    current = {supplier_key(d.supplier): float(d.total) for d in docs if d.total}
+    keys = {supplier_key(d.supplier): d.key for d in docs}
+    names = {supplier_key(d.supplier): re.sub(r"\s*\(lab copy \d+\)", "", d.supplier) for d in docs}
+    groups = cartel.recurring_groups(current, history or []) if len(current) >= 3 else []
+    for g in groups[:3]:
+        g["names"] = [names[k] for k in g["suppliers"]]
+        g["winner_names"] = [names.get(w, w) for w in g["winners"]]
+        if g["probability"] >= 0.5:
+            f = Finding(next_id(), "cartel_pattern", "medium", "Recurring group bids like proven cartels",
+                        f"{', '.join(g['names'])} have quoted together in {g['joint_tenders']} purchases with {g['rotation']} different winners. Their bid pattern scores "
+                        f"{g['probability']:.2f} on a model trained on proven cartel cases (threshold 0.50); strongest signals: " + ", ".join(d["screen"] for d in g["drivers"][:2]) + ".",
+                        [keys[k] for k in g["suppliers"]], {"probability": g["probability"], "joint_tenders": g["joint_tenders"], "winners": [names.get(w, w) for w in g["winners"]]})
+            findings.append(f)
+            g["finding"] = f.id
     # Per-quote verdict for the policy engine.
     per_quote = {}
     compromised = [c for c in clusters if c["level"] == "high"]
@@ -304,6 +326,6 @@ def analyze(docs: list[DocInput], member_names: list[str]) -> dict:
         per_quote[d.key] = {"status": status, "detail": detail, "findings": [f.id for f in mine]}
     worst = max((_RANK[f.severity] for f in findings if f.severity != "low"), default=0)
     return {"version": INTEGRITY_VERSION, "overall": {3: "block", 2: "review"}.get(worst, "clear"), "findings": [f.as_dict() for f in findings],
-            "links": links, "clusters": clusters, "screens": screens, "per_quote": per_quote,
+            "links": links, "clusters": clusters, "screens": screens, "per_quote": per_quote, "cartel_model": {"groups": groups[:3], "model": cartel.model()["name"], "history_tenders": len(history or [])},
             "documents": {d.key: {"supplier": d.supplier, "filename": d.filename, "meta": (d.forensics or {}).get("meta"), "revisions": (d.forensics or {}).get("revision_count"),
                                   "doc_id": (d.forensics or {}).get("doc_id"), "assessed": bool(d.forensics and "error" not in d.forensics)} for d in docs}}

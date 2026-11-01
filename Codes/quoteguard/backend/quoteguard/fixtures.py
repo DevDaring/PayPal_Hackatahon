@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import io
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -328,6 +329,35 @@ def cover_quote_set(issue: date) -> list[dict]:
     return [{"supplier": "Pinecrest Audio", "filename": "Pinecrest_Audio_quote_DEMO.pdf", "pdf": quote_pdf(pine), "favoured": True},
             {"supplier": "Alder Technologies", "filename": "Alder_Technologies_quote_DEMO.pdf", "pdf": alder_pdf, "favoured": False},
             {"supplier": "Birch & Co Supply", "filename": "Birch_Co_Supply_quote_DEMO.pdf", "pdf": quote_pdf(birch), "favoured": False}]
+
+
+ROTATING_GROUP = ("Kestrel Audio", "Larchmont Devices", "Mosswood Supply")
+
+
+def rotating_cartel_tenders(issue: date) -> list[list[dict]]:
+    """Four purchases from the same three suppliers, oldest first; the last is the current one.
+
+    Bids follow the median profile of proven cartel groups in the Okinawa data (Imhof & Wallimann 2021): about 1.1 %
+    max-min spread, the winner slightly set apart (normalised distance about 1.15), and the winner rotating. Every quote is
+    individually compliant, within budget and forensically clean, so nothing in a single purchase looks wrong.
+    """
+    plan = [(578.00, (0, 1, 2)), (583.00, (1, 2, 0)), (575.00, (2, 0, 1)), (581.00, (0, 1, 2))]
+    out = []
+    for n, (base, order) in enumerate(plan):
+        g2 = base * 0.011 / 2.353
+        totals = [base, base + 1.353 * g2, base + 2.353 * g2]
+        tender = []
+        for rank, idx in enumerate(order):
+            sup = ROTATING_GROUP[idx]
+            total = Decimal(str(totals[rank])).quantize(Decimal("0.01"))
+            unit = (total - Decimal("25.00")) / 30
+            unit = unit.quantize(Decimal("0.01"), rounding="ROUND_FLOOR")
+            sub = unit * 30
+            q = headset_quote(sup, ("neutral", "violet", "harbor")[idx], issue - timedelta(days=21 * (len(plan) - 1 - n)), unit=f"{unit:.2f}", sub=f"{sub:.2f}",
+                              ship=f"{total - sub:.2f}", tax="0.00", total=f"{total:.2f}", days=5, quote_no=f"{sup[:2].upper()}-{4100 + 37 * n + idx}")
+            tender.append({"supplier": sup, "filename": f"{sup.replace(' ', '_')}_quote_{n + 1}_DEMO.pdf", "pdf": quote_pdf(q), "total": f"{total:.2f}"})
+        out.append(tender)
+    return out
 
 
 def lab_fixtures(issue: date) -> dict[str, dict]:

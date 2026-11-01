@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, ChevronDown, FileClock, Fingerprint, History, Network, ScanSearch, ShieldAlert, ShieldCheck, ShieldQuestion, Sigma } from "lucide-react";
+import { Bot, ChevronDown, FileClock, Fingerprint, FlaskConical, History, Network, ScanSearch, ShieldAlert, ShieldCheck, ShieldQuestion, Sigma } from "lucide-react";
 import { api } from "../lib/api";
 import type { Comparison } from "../lib/types";
 import { PageImage } from "./EvidenceViewer";
@@ -13,7 +13,9 @@ type Report = {
   clusters: { quotes: string[]; level: string }[]; screens: { n: number; cv: number; rd: number; cover_bid_pattern: boolean; note: string } | null;
   per_quote: Record<string, { status: string; detail: string }>; documents: Record<string, { supplier: string; filename: string; meta: any; revisions: number; doc_id: string | null; assessed: boolean }>;
   memo: { headline: string; explanation: string; next_steps: string[]; question_for_supplier: string; model: string } | null;
+  cartel_model?: { model: string; history_tenders: number; groups: CartelGroup[] };
 };
+type CartelGroup = { names: string[]; joint_tenders: number; winner_names: string[]; rotation: number; probability: number; drivers: { screen: string; aggregate: string; percentile: number }[] };
 
 const VERDICT = {
   clear: { label: "No manipulation signals", icon: ShieldCheck, cls: "bg-teal-soft text-teal-strong border-teal/25" },
@@ -23,7 +25,7 @@ const VERDICT = {
 const SEV = { high: "bg-danger text-white", medium: "bg-amber text-white", low: "bg-sunken text-muted" };
 const STROKE = { high: "#b42318", medium: "#a8550a", low: "#b9b2a6" };
 const SHORT: Record<string, string> = { shared_document_id: "same file", shared_author: "same author", shared_phone: "same phone", shared_email: "same email", shared_bank: "same bank acct", created_together: "minutes apart" };
-const KIND_ICON: Record<string, any> = { revision_edit: History, revision_text: History, overlay_patch: ScanSearch, font_outlier: ScanSearch, author_is_member: Fingerprint, not_independent: Network };
+const KIND_ICON: Record<string, any> = { cartel_pattern: FlaskConical, revision_edit: History, revision_text: History, overlay_patch: ScanSearch, font_outlier: ScanSearch, author_is_member: Fingerprint, not_independent: Network };
 
 const CHECKS = [
   ["Hidden earlier revisions", "Incremental saves keep every earlier version of a PDF. We re-read it and diff what changed."],
@@ -32,6 +34,7 @@ const CHECKS = [
   ["Shared origin", "Same original document ID, author, phone, email or bank details across 'different' suppliers."],
   ["Insider authorship", "A supplier's quote whose document author is a member of your own workspace."],
   ["Bid screens", "Coefficient of variation and relative distance from the bid-rigging literature (Huber & Imhof, 2019) — context only."],
+  ["Cartel-pattern model", "For supplier groups that quoted together in 3+ purchases: our market-relative, sign-constrained model trained on proven cartel cases — a review signal."],
 ];
 
 export function IntegrityRadar({ requestId, cmp }: { requestId: string; cmp: Comparison }) {
@@ -75,6 +78,7 @@ export function IntegrityRadar({ requestId, cmp }: { requestId: string; cmp: Com
           </div>
           <div className="grid content-start gap-4">
             <ProvenanceGraph r={r} cmp={cmp} />
+            {r.cartel_model?.groups?.length ? <CartelCard g={r.cartel_model.groups[0]} /> : r.cartel_model && <p className="rounded-xl border border-dashed border-line px-4 py-3 text-[12.5px] text-muted">Cartel-pattern model: no supplier group here has quoted together in 3 or more purchases yet ({r.cartel_model.history_tenders} earlier purchases in this workspace).</p>}
             {r.screens && <Screens s={r.screens} />}
             <details className="rounded-xl border border-line bg-sunken/50 px-4 py-3 text-[12.5px] text-ink-2">
               <summary className="cursor-pointer font-medium text-ink">What the radar checks</summary>
@@ -194,6 +198,29 @@ function ProvenanceGraph({ r, cmp }: { r: Report; cmp: Comparison }) {
         <span className="inline-flex items-center gap-1"><i className="h-0.5 w-4 bg-[#a8550a]" />supporting</span>
         <span className="inline-flex items-center gap-1"><i className="h-0 w-4 border-t border-dashed border-[#b9b2a6]" />similar template (context)</span>
       </div>
+    </div>
+  );
+}
+
+function CartelCard({ g }: { g: CartelGroup }) {
+  const hot = g.probability >= 0.5;
+  return (
+    <div className={cx("rounded-2xl border p-4", hot ? "border-amber-line bg-amber-soft/40" : "border-line")} data-cartel={hot ? "flag" : "clear"}>
+      <div className="flex items-center justify-between">
+        <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-muted"><FlaskConical className="size-3.5" aria-hidden />Cartel-pattern model · our research</span>
+        <Badge tone={hot ? "warn" : "neutral"}>{hot ? "review" : "no pattern"}</Badge>
+      </div>
+      <div className="mt-2 flex items-end gap-3">
+        <div className="font-display text-[40px] leading-none text-ink tnum">{g.probability.toFixed(2)}</div>
+        <div className="pb-1 text-[12px] text-muted">score · threshold 0.50<br />{g.joint_tenders} joint purchases · {g.rotation} different winners</div>
+      </div>
+      <div className="relative mt-2 h-2 rounded-full bg-gradient-to-r from-teal-soft via-amber-soft to-danger-soft">
+        <div className="absolute -top-1 h-4 w-1 rounded bg-ink" style={{ left: `calc(${Math.min(99, g.probability * 100)}% - 2px)` }} />
+        <div className="absolute -top-0.5 h-3 w-px bg-ink/40" style={{ left: "50%" }} />
+      </div>
+      <div className="mt-3 text-[12px] text-ink-2"><b>Winners, oldest → latest:</b> {[...g.winner_names].reverse().join(" → ")}</div>
+      <div className="mt-1 text-[12px] text-ink-2"><b>Strongest signals:</b> {g.drivers.map((d) => `${d.screen} (${d.aggregate}, p${Math.round(d.percentile * 100)})`).join(" · ")}</div>
+      <p className="mt-2 text-[11.5px] text-muted">Logistic model on market-relative screens with economic sign constraints, trained on 23,793 bidder groups from proven cartel cases in Japan, Switzerland and Italy (Imhof &amp; Wallimann 2021 data, CC BY 4.0). In unseen markets: mean AUC 0.818 vs 0.700–0.765 for published-style baselines. A review signal, never proof.</p>
     </div>
   );
 }

@@ -154,9 +154,10 @@ test("QuoteGuard demo walkthrough (real PayPal Sandbox)", async ({ page, context
   await click(page, page.getByRole("link", { name: "Demo Lab", exact: true }));
   await expect(page.getByRole("heading", { name: "Try to break the payment path" })).toBeVisible();
   const card = (t: string) => page.locator("div.rounded-2xl", { has: page.getByRole("heading", { name: t }) }).first();
-  const EDITED = "Supplier PDF edited to fit the budget", COVER = "Fabricated competing quotes";
+  const EDITED = "Supplier PDF edited to fit the budget", COVER = "Fabricated competing quotes", CARTEL = "Suppliers taking turns to win";
   await click(page, card(EDITED).getByRole("button", { name: "Run" }));
-  await card(COVER).getByRole("button", { name: "Run" }).click();  // second attack runs in parallel; shown later
+  await card(COVER).getByRole("button", { name: "Run" }).click();  // the other two attacks run in parallel; shown later
+  await card(CARTEL).getByRole("button", { name: "Run" }).click();
   await expect(card(EDITED).getByText("Blocked as expected")).toBeVisible({ timeout: 240_000 });
   await glide(page, card(EDITED).getByText("Counterfactual: the same policy without document forensics"));
   await pause(page, 3000);
@@ -185,15 +186,29 @@ test("QuoteGuard demo walkthrough (real PayPal Sandbox)", async ({ page, context
   await glide(page, radar.getByText("Bid screens"));
   await pause(page, 2500);
 
-  scene("19_evaluation", "Evaluation: integrity benchmark, then extraction rules vs AI");
-  await click(page, page.getByRole("link", { name: "Evaluation", exact: true }));
-  await expect(page.getByTestId("integrity-bench")).toBeVisible({ timeout: 30_000 });
-  await pause(page, 3500);
-  await still(page, "19_evaluation");
-  await glide(page, page.getByText("Rules vs AI on these documents"));
+  scene("19_radar_rotating_cartel", "Our research: cartel-pattern model flags a supplier group from its bidding history; documents are clean");
+  await page.goto("/demo-lab");
+  await expect(card(CARTEL).getByText("Blocked as expected")).toBeVisible({ timeout: 420_000 });
+  await glide(page, card(CARTEL).getByText(/Cartel-pattern model \(trained on proven cartel cases\)/));
   await pause(page, 2500);
+  const cartelHref = await card(CARTEL).getByRole("link", { name: "Open lab request" }).getAttribute("href");
+  await page.goto(`${cartelHref}/compare`);
+  await expect(radar).toBeVisible({ timeout: 120_000 });
+  await glide(page, radar.locator("[data-cartel]"));
+  await pause(page, 4500);
+  await still(page, "19_radar_rotating_cartel");
 
-  scene("20_end", "End");
+  scene("20_evaluation", "Evaluation: research table (unseen markets), then the integrity benchmark");
+  await click(page, page.getByRole("link", { name: "Evaluation", exact: true }));
+  await expect(page.getByTestId("research-card")).toBeVisible({ timeout: 30_000 });
+  await glide(page, page.getByTestId("research-card"));
+  await pause(page, 4000);
+  await still(page, "20_research");
+  await glide(page, page.getByTestId("integrity-bench"));
+  await pause(page, 3000);
+  await still(page, "20_evaluation");
+
+  scene("21_end", "End");
   await pause(page, 1000);
   writeFileSync(`${OUT}/walkthrough-timeline.json`, JSON.stringify({ base_url: page.url(), viewport: "1920x1080", scenes: marks,
     note: "t_ms is milliseconds from the start of the MAIN page video. The PayPal popup is a separate .webm in raw/." }, null, 2));

@@ -664,6 +664,18 @@ def eval_runs(ctx: Ctx = Depends(require_ctx), db: Session = Depends(get_db)):
     return {"items": [evaluation.run_json(r) for r in rows]}
 
 
+@router.get("/evaluation/research", tags=["evaluation"])
+def eval_research(ctx: Ctx = Depends(require_ctx)):
+    """The bid-rigging transfer study behind the cartel-pattern model (static results; see research/bid_rigging/)."""
+    import json
+    from pathlib import Path
+
+    from ...research import cartel
+
+    study = json.loads((Path(cartel.__file__).with_name("cartel_study_v1.json")).read_text())
+    return {k: study[k] for k in ("name", "version", "date", "data", "protocol", "rows")} | {"model": cartel.model()["name"]}
+
+
 @router.get("/evaluation/integrity", tags=["evaluation"])
 def eval_integrity(ctx: Ctx = Depends(require_ctx), db: Session = Depends(get_db)):
     """Latest stored run of the document-integrity benchmark (deterministic; see integrity_bench.py)."""

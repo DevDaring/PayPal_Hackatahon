@@ -151,7 +151,7 @@ export function CompareStep({ req, cmp, onOpen }: { req: RequestDetail; cmp: Com
               ))}
             </ul>
           </Card>
-        ) : <Card className="p-5 text-sm text-muted">The cheapest priced quote is also the best compliant one.</Card>}
+        ) : <Card className="p-5 text-sm text-muted">{best ? "The cheapest priced quote is also the best compliant one." : "No quote is compliant yet, so there is no price trade-off to explain. See the unknowns and the Integrity Radar below."}</Card>}
       </div>
 
       <IntegrityRadar requestId={req.id} cmp={cmp} />

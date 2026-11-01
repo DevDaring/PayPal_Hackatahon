@@ -29,6 +29,25 @@ def _member_names(db: Session, workspace_id) -> list[str]:
     return names
 
 
+def _history(db: Session, req: PurchaseRequest, limit: int = 200) -> list[dict[str, float]]:
+    """Past tenders in this workspace: {supplier_key: stated total} per request with at least three priced quotes."""
+    from ..documents.integrity import supplier_key
+    from ..models import Quote, QuoteVersion, Supplier
+
+    rows = db.execute(select(Quote.request_id, Supplier.name, QuoteVersion.supplier_name, QuoteVersion.stated_total)
+                      .join(QuoteVersion, QuoteVersion.id == Quote.current_version_id)
+                      .join(PurchaseRequest, PurchaseRequest.id == Quote.request_id)
+                      .outerjoin(Supplier, Supplier.id == Quote.supplier_id)
+                      .where(Quote.workspace_id == req.workspace_id, Quote.request_id != req.id, PurchaseRequest.status != "canceled")
+                      .order_by(PurchaseRequest.created_at.desc()).limit(limit * 6)).all()
+    by_req: dict = {}
+    for rid, linked, extracted, total in rows:
+        name = linked or extracted  # the linked supplier record is authoritative; the extracted name is a fallback
+        if name and total:
+            by_req.setdefault(rid, {})[supplier_key(name)] = float(total)
+    return [t for t in by_req.values() if len(t) >= 3][:limit]
+
+
 def ensure_forensics(db: Session, doc: Document) -> dict | None:
     """Documents processed before forensics existed are assessed from the stored file, once."""
     if doc.forensics is None and doc.status == "extracted":
@@ -46,7 +65,7 @@ def assess(db: Session, req: PurchaseRequest, rows) -> dict:
         doc = db.get(Document, q.document_id)
         pages = db.execute(select(DocumentPage).where(DocumentPage.document_id == doc.id).order_by(DocumentPage.page_number)).scalars().all()
         docs.append(DocInput(key=str(q.id), supplier=f.supplier, text="\n".join(p.text for p in pages), forensics=ensure_forensics(db, doc), total=qv.stated_total, filename=doc.filename))
-    return analyze(docs, _member_names(db, req.workspace_id))
+    return analyze(docs, _member_names(db, req.workspace_id), _history(db, req))
 
 
 _MEMO_SYSTEM = """You are a procurement fraud investigator writing for a busy approver.

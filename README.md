@@ -24,7 +24,7 @@ QuoteGuard reads supplier quotations, links every extracted term to the exact li
 
 **Agent Mode** runs a resumable workflow on your own request and PDFs (or the sample): it reads, cites, verifies and decides on its own, and stops at the three consents it cannot give — you confirm the requirements, an approver signs the exact purchase, the buyer authorises in PayPal. The assistant can query PayPal through **PayPal Agent Toolkit** read-only tools scoped by the server to the request.
 
-**Demo Lab** runs controlled attacks through the real services: a supplier PDF edited to fit the budget, a winning quote whose "competitors" were written by its own salesperson, amount or payee changed after approval (even by editing the database directly), a PDF that tells the AI to ignore the budget and pay an email address, five simultaneous Pay/Capture clicks, and a capture whose response is lost.
+**Demo Lab** runs controlled attacks through the real services: a supplier PDF edited to fit the budget, a winning quote whose "competitors" were written by its own salesperson, three suppliers taking turns to win, amount or payee changed after approval (even by editing the database directly), a PDF that tells the AI to ignore the budget and pay an email address, five simultaneous Pay/Capture clicks, and a capture whose response is lost.
 
 ## Integrity Radar — when a person tries to game the purchase
 
@@ -43,9 +43,30 @@ High-severity findings make the new **Document integrity** policy check fail, so
 
 **Benchmark (82 labelled purchase cases, deterministic):** 0 of 38 honest cases flagged (60 documents, including all 26 independently built holdout layouts and honest suppliers that share invoicing software); 40 of 44 attacks caught (36 blocked, 4 sent to review); original amounts recovered in 15 of 15 incremental edits, 12 of them on holdout layouts. The 4 misses are the hard cases we labelled in advance — a cleanly re-saved edit leaves no structural trace, and an invented competitor with fresh, unrelated metadata shares nothing to link. Synthetic, and built by the same team as the detectors: a regression benchmark, not a field estimate.
 
+## Our research — catching cartels in markets the model has never seen
+
+The hardest fraud leaves every document clean: the same suppliers keep quoting together and **take turns to win**. Statistical screens from the bid-rigging literature can spot this, but the published machine-learning detectors are trained and tested inside one market — and a procurement tool is used where no cartel has been labelled.
+
+**Question:** do screen-based detectors transfer to an unseen market, and can we make them transfer better?
+**Data:** the public replication data of Imhof & Wallimann (2021, CC BY 4.0) — **23,793 bidder groups with proven cartel periods** from Okinawa (Japan), Switzerland and Turin (Italy).
+**Method (ours):** *market-relative screens* — every screen (coefficient of variation, spread, relative/normalised/alternative distance, skew; min/max/mean/median over a group's joint tenders) becomes a percentile within its own market, which needs only that market's unlabelled bids — plus a logistic model whose coefficients are **constrained to the signs cover-bidding theory predicts**.
+**Protocol:** leave-one-market-out; our variant is chosen only on the training markets; paired bootstrap tests.
+
+| AUC in the held-out country | Japan | Switzerland | Italy | Mean |
+|---|---|---|---|---|
+| Two-screen rule (RD > 1 & CV < 5 %) | 0.639 | 0.829 | 0.633 | 0.700 |
+| Random forest on screens (Huber & Imhof 2019 style) | 0.638 | 0.766 | 0.739 | 0.714 |
+| Lasso logit on screens (Imhof & Wallimann 2021 style) | 0.627 | 0.824 | 0.844 | 0.765 |
+| Boosted trees on screens | 0.682 | 0.759 | 0.747 | 0.729 |
+| **QuoteGuard (market-relative + sign-constrained)** | **0.773** | **0.837** | **0.845** | **0.818** |
+
+Significantly better in 9 of 12 paired comparisons, statistically tied in the other 3, never worse — the only method that is best or tied-best in every unseen market. Flexible models that score 0.96–0.99 *inside* one market drop to 0.64–0.77 outside it; market-relative screens plus economic constraints recover most of that loss. Baselines are re-implemented on the same features, not exact replications. Full write-up, scripts and results: [`Codes/quoteguard/research/bid_rigging/`](Codes/quoteguard/research/bid_rigging/).
+
+**In the product:** the trained model (28 coefficients, `backend/quoteguard/research/cartel_model_v1.json`) scores every supplier group that has quoted together in ≥ 3 purchases. In Demo Lab, three suppliers with clean, compliant quotes but a cartel-like bidding history (rotating winners, the median profile of proven Okinawa cartel groups) score 0.62 > 0.50 and the purchase is held for review — without the model it would be payable at rank 1. A review signal, never proof.
+
 ## Measured, not claimed
 
-- 72 backend tests on real PostgreSQL (document forensics and both integrity attacks end-to-end, negated specs, recovery after expiry, wrong/missing payee, duplicate deliveries, concurrency, webhooks, Demo Lab), frontend unit tests, Playwright journeys against the live site including a real Sandbox buyer approval and capture.
+- 75 backend tests on real PostgreSQL (document forensics, the cartel-pattern model and all three integrity attacks end-to-end, negated specs, recovery after expiry, wrong/missing payee, duplicate deliveries, concurrency, webhooks, Demo Lab), frontend unit tests, Playwright journeys against the live site including a real Sandbox buyer approval and capture.
 - **Why AI:** on a separate holdout of 26 *unfamiliar* quote layouts (labels frozen before testing), the rules parser made 11/26 correct decisions; Gemini 2.5 Flash + QuoteGuard's checks made 24/26 in each of three first, unseen runs. That run also exposed one false eligibility — fixed, regression-tested, and every later run is labelled “seen” (Gemini 26/26 ×3). The live demo now runs **Claude Sonnet 5.5 via NanoGPT**: 23/26 on the (seen) holdout with **0/18 non-payable quotes marked payable** and 368/368 citations found — its three misses all fail safe (a missed subtotal twice, “fail” instead of “unknown” once). Policy-level metrics are named “non-payable cases rejected by policy”; payment-boundary behaviour is tested separately. All runs are kept in [`Codes/quoteguard/reports/`](Codes/quoteguard/reports/).
 
 ## Documentation
@@ -59,6 +80,7 @@ High-severity findings make the new **Document integrity** policy check fail, so
 | Testing, evaluation, sandbox checklist | [`docs/TESTING.md`](Codes/quoteguard/docs/TESTING.md) |
 | Deployment (self-host, Docker Compose, Render) | [`docs/DEPLOYMENT.md`](Codes/quoteguard/docs/DEPLOYMENT.md) |
 | Build status | [`BUILD_STATUS.md`](Codes/quoteguard/BUILD_STATUS.md) |
+| Research: cross-market bid-rigging detection | [`research/bid_rigging/`](Codes/quoteguard/research/bid_rigging/) |
 | Demo video production script | [`Video_Script.md`](Video_Script.md) |
 | Submission copy & demo script | [`submission/`](Codes/quoteguard/submission/) |
 

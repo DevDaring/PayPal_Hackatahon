@@ -96,7 +96,7 @@ On the **Pay** step, click *Pay with PayPal* and sign in with a PayPal **sandbox
 ## Tests and evaluation
 
 ```bash
-cd backend && .venv/bin/pytest -q                  # 72 tests on real PostgreSQL (payments, recovery, authorization, negated specs, document forensics, concurrency, webhooks, Demo Lab)
+cd backend && .venv/bin/pytest -q                  # 75 tests on real PostgreSQL (payments, recovery, authorization, negated specs, document forensics, cartel model, concurrency, webhooks, Demo Lab)
 cd frontend && npm test                            # unit tests (Vitest)
 BASE_URL=https://quoteguard.koushikdeb.com npx playwright test   # critical journey up to the PayPal buttons
 cd backend && .venv/bin/python -m quoteguard.cli run-eval llm quoteguard-holdout-v1   # 26 unfamiliar quotes (also: rules, quoteguard-eval-v1)

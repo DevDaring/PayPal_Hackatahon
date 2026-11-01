@@ -1,0 +1,62 @@
+[
+ {
+  "target": "JP",
+  "inner_auc": {
+   "V1 MR + monotone boosting": 0.755,
+   "V2 MR + sign-constrained logit": 0.871,
+   "V3 MR ensemble (V1 \u2295 V2, rank average)": 0.828
+  },
+  "chosen": "V2 MR + sign-constrained logit",
+  "auc": 0.773,
+  "auc_ci": [
+   0.743,
+   0.804
+  ],
+  "bal_acc": 0.715,
+  "all_heldout_auc": {
+   "V1 MR + monotone boosting": 0.785,
+   "V2 MR + sign-constrained logit": 0.773,
+   "V3 MR ensemble (V1 \u2295 V2, rank average)": 0.792
+  }
+ },
+ {
+  "target": "CH",
+  "inner_auc": {
+   "V1 MR + monotone boosting": 0.693,
+   "V2 MR + sign-constrained logit": 0.735,
+   "V3 MR ensemble (V1 \u2295 V2, rank average)": 0.735
+  },
+  "chosen": "V3 MR ensemble (V1 \u2295 V2, rank average)",
+  "auc": 0.837,
+  "auc_ci": [
+   0.819,
+   0.855
+  ],
+  "bal_acc": 0.76,
+  "all_heldout_auc": {
+   "V1 MR + monotone boosting": 0.738,
+   "V2 MR + sign-constrained logit": 0.89,
+   "V3 MR ensemble (V1 \u2295 V2, rank average)": 0.837
+  }
+ },
+ {
+  "target": "IT",
+  "inner_auc": {
+   "V1 MR + monotone boosting": 0.756,
+   "V2 MR + sign-constrained logit": 0.828,
+   "V3 MR ensemble (V1 \u2295 V2, rank average)": 0.815
+  },
+  "chosen": "V2 MR + sign-constrained logit",
+  "auc": 0.845,
+  "auc_ci": [
+   0.832,
+   0.857
+  ],
+  "bal_acc": 0.736,
+  "all_heldout_auc": {
+   "V1 MR + monotone boosting": 0.752,
+   "V2 MR + sign-constrained logit": 0.845,
+   "V3 MR ensemble (V1 \u2295 V2, rank average)": 0.816
+  }
+ }
+]

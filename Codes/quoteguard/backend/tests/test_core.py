@@ -463,7 +463,7 @@ def test_fake_provider_is_used():
 
 # Demo Lab ---------------------------------------------------------------------------
 @pytest.mark.parametrize("scenario,verdict", [("amount_changed", "blocked_as_expected"), ("merchant_changed", "blocked_as_expected"), ("malicious_pdf", "blocked_as_expected"),
-                                              ("double_click", "one_operation"), ("lost_response", "recovered"), ("edited_bill", "blocked_as_expected"), ("cover_quotes", "blocked_as_expected")])
+                                              ("double_click", "one_operation"), ("lost_response", "recovered"), ("edited_bill", "blocked_as_expected"), ("cover_quotes", "blocked_as_expected"), ("rotating_cartel", "blocked_as_expected")])
 def test_demo_lab_scenarios_use_real_services(world, scenario, verdict):
     from quoteguard.models import DemoScenarioRun
 
@@ -752,3 +752,39 @@ def test_integrity_memo_never_holds_locks_across_the_model_call(world, monkeypat
         r = db.get(DemoScenarioRun, run_id)
         assert (r.status, r.verdict) == ("finished", "blocked_as_expected"), r.steps[-2:]
         assert any(st["title"].startswith("AI investigator memo") for st in r.steps)
+
+
+# Cartel-pattern model (research/cartel.py) -------------------------------------------
+def test_cartel_screens_match_the_published_definitions():
+    import math
+
+    from quoteguard.research import cartel
+
+    s = cartel.tender_screens([585.0, 612.0, 629.0])
+    assert abs(s["RD1"] / s["RDalter"] - math.sqrt(2)) < 1e-9  # three bids: sd of two losing bids = gap/sqrt(2)
+    assert 0 <= s["RDnorm"] <= 2 and abs(s["skew1"]) <= math.sqrt(3) + 1e-9  # bounds of the training data's definitions
+    assert abs(s["cvbid"] - 3.645) < 0.01 and abs(s["Spread"] - 44 / 585) < 1e-9
+    m = cartel.model()
+    assert len(m["coef"]) == len(m["features"]) == 28
+    assert all((c >= 0 if sg > 0 else c <= 0) for c, sg in zip(m["coef"], m["signs"]) if sg)  # economic sign constraints hold
+
+
+def test_rotating_cartel_needs_history_and_competitive_groups_stay_clear():
+    from quoteguard.documents.integrity import DocInput, analyze, supplier_key
+    from quoteguard.documents.parse_child import parse
+    from quoteguard.research import cartel
+
+    tenders = fixtures.rotating_cartel_tenders(fixtures.EVAL_SCENARIO_DATE)
+    hist = [{supplier_key(d["supplier"]): float(d["total"]) for d in t} for t in tenders[:-1]]
+    docs = []
+    for d in tenders[-1]:
+        p = parse(d["pdf"], 20)
+        docs.append(DocInput(d["supplier"], d["supplier"], "\n".join(x["text"] for x in p["pages"]), p["forensics"], Decimal(d["total"])))
+    assert analyze(docs, [], [])["overall"] == "clear"  # each document is clean on its own
+    r = analyze(docs, [], hist)
+    g = r["cartel_model"]["groups"][0]
+    assert r["overall"] == "review" and g["probability"] >= 0.5 and g["rotation"] == 3 and g["joint_tenders"] == 4
+    assert {v["status"] for v in r["per_quote"].values()} == {"unknown"}
+    competitive = [{"k": 548, "l": 596, "m": 631}, {"k": 602, "l": 557, "m": 649}, {"k": 571, "l": 612, "m": 590}, {"k": 566, "l": 603, "m": 655}]
+    assert cartel.recurring_groups(competitive[0], competitive[1:])[0]["probability"] < 0.2
+    assert cartel.recurring_groups(competitive[0], competitive[1:2]) == []  # fewer than 3 joint tenders: not scored
