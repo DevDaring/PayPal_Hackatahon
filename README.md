@@ -2,7 +2,7 @@
 
 **From supplier PDF to approved PayPal purchase — with evidence for every decision and checks before money moves.**
 
-QuoteGuard reads supplier quotations, links every extracted term to the exact line on the PDF it came from, checks purchasing requirements with deterministic code, binds organisation approval to a hashed snapshot of the exact purchase, and completes that purchase through **PayPal Sandbox** — with durable idempotency, reconciliation of lost responses, and a downloadable evidence package.
+QuoteGuard reads supplier quotations, links every extracted term to the exact line on the PDF it came from, checks purchasing requirements with deterministic code, **runs document forensics to catch edited bills and staged competition**, binds organisation approval to a hashed snapshot of the exact purchase, and completes that purchase through **PayPal Sandbox** — with durable idempotency, reconciliation of lost responses, and a downloadable evidence package.
 
 - **Live demo:** https://quoteguard.koushikdeb.com — click **Fill to Sign in** on the login page. Every demo sign-in gets its own isolated workspace.
 - **PayPal Sandbox only.** No real money moves; live mode is disabled in code. Supplier documents are synthetic.
@@ -15,7 +15,8 @@ QuoteGuard reads supplier quotations, links every extracted term to the exact li
 | Step | What happens | Why you can trust it |
 |---|---|---|
 | Describe | Plain-English request → typed requirements (quantity, budget incl. shipping & tax, delivery date, must-haves) | A person confirms every value before it counts |
-| Extract | Gemini reads supplier PDFs; every value cites a verbatim line | Citations are re-checked on the page, highlighted, number-verified and cross-checked by a deterministic parser |
+| Extract | An LLM (Claude Sonnet 5.5 via NanoGPT) reads supplier PDFs; every value cites a verbatim line | Citations are re-checked on the page, highlighted, number-verified and cross-checked by a deterministic parser |
+| Verify the documents | **Integrity Radar**: hidden-revision recovery, white-box patch and retyped-amount detection, provenance graph across suppliers, bid-rigging screens | Deterministic forensics decide; the AI only writes the investigator memo, and every number in it is checked against the findings |
 | Compare | Pass / fail / **unknown** per requirement, “why the cheapest quote loses”, what-if explorer | Decimal arithmetic in code; the AI only explains; missing evidence is never a pass |
 | Approve | Approver signs the exact purchase | SHA-256 of a canonical snapshot (supplier, quote version, amounts, PayPal merchant, expiry); self-approval disabled |
 | Pay | PayPal Orders v2 + official PayPal buttons | Order built only from the approved snapshot; re-validated before order creation and capture; stable `PayPal-Request-Id`s |
@@ -23,12 +24,29 @@ QuoteGuard reads supplier quotations, links every extracted term to the exact li
 
 **Agent Mode** runs a resumable workflow on your own request and PDFs (or the sample): it reads, cites, verifies and decides on its own, and stops at the three consents it cannot give — you confirm the requirements, an approver signs the exact purchase, the buyer authorises in PayPal. The assistant can query PayPal through **PayPal Agent Toolkit** read-only tools scoped by the server to the request.
 
-**Demo Lab** runs controlled attacks through the real services: amount or payee changed after approval (even by editing the database directly), a PDF that tells the AI to ignore the budget and pay an email address, five simultaneous Pay/Capture clicks, and a capture whose response is lost.
+**Demo Lab** runs controlled attacks through the real services: a supplier PDF edited to fit the budget, a winning quote whose "competitors" were written by its own salesperson, amount or payee changed after approval (even by editing the database directly), a PDF that tells the AI to ignore the budget and pay an email address, five simultaneous Pay/Capture clicks, and a capture whose response is lost.
+
+## Integrity Radar — when a person tries to game the purchase
+
+Two of the most common procurement frauds start with a document, not a hacker: an **edited bill** (a quote changed after the supplier issued it) and **staged competition** (cover quotes — fake "competitors" produced so a favoured supplier looks like the obvious choice; listed as a red flag by anti-corruption agencies such as Hong Kong's ICAC). QuoteGuard checks the files themselves:
+
+| Detector | How it works | Research basis |
+|---|---|---|
+| **Hidden-revision recovery** | PDF incremental saves keep every earlier version of the file. QuoteGuard re-reads the earlier revision inside the sandboxed parser and diffs it: *“Total $640.00 → $540.00, Shipping $160.00 → $60.00.”* | PDF incremental-update forensics (PDF Association, *In Defence of Incremental Saves*, 2025) |
+| **White-box patches** | Walks the page's content stream in drawing order and finds opaque shapes drawn *after* the text they cover, with new text typed on top | Content-stream analysis |
+| **Retyped amounts** | An amount set in a different font from its own label and from every other amount | Font-consistency forensics |
+| **Provenance graph** | Links "different" suppliers that share an original document ID, author, phone, email or bank details, were created minutes apart with the same tool, or were written by someone in the buyer's own workspace | ICAC / IACRC procurement red flags |
+| **Template resemblance** | Broder's w-shingling resemblance on masked text — context only, because honest suppliers often share invoicing software | Broder (1997) |
+| **Bid screens** | Coefficient of variation and relative distance of the quoted totals — the two strongest screens in Huber & Imhof's study of Swiss bid-rigging cartels — context only with few quotes | Huber & Imhof (2019), *Int. J. Industrial Organization* |
+
+High-severity findings make the new **Document integrity** policy check fail, so the quote cannot be recommended, approved or paid; medium findings send it to review. In Demo Lab both attacks would have been **payable at rank 1 without forensics** — the counterfactual is computed by the same policy engine — and both are blocked with it.
+
+**Benchmark (82 labelled purchase cases, deterministic):** 0 of 38 honest cases flagged (60 documents, including all 26 independently built holdout layouts and honest suppliers that share invoicing software); 40 of 44 attacks caught (36 blocked, 4 sent to review); original amounts recovered in 15 of 15 incremental edits, 12 of them on holdout layouts. The 4 misses are the hard cases we labelled in advance — a cleanly re-saved edit leaves no structural trace, and an invented competitor with fresh, unrelated metadata shares nothing to link. Synthetic, and built by the same team as the detectors: a regression benchmark, not a field estimate.
 
 ## Measured, not claimed
 
-- 61 backend tests on real PostgreSQL (negated specs end-to-end, recovery after expiry, wrong/missing payee, duplicate deliveries, concurrency, webhooks, Demo Lab), frontend unit tests, Playwright journeys against the live site including a real Sandbox buyer approval and capture.
-- **Why AI:** on a separate holdout of 26 *unfamiliar* quote layouts (labels frozen before testing), the rules parser made 11/26 correct decisions; Gemini 2.5 Flash + QuoteGuard's checks made 24/26 in each of three runs. That run also exposed one false eligibility — fixed, regression-tested, and every later run is labelled “seen” (26/26 ×3). Development set: 24/24. Policy-level metrics are named “non-payable cases rejected by policy”; payment-boundary behaviour is tested separately. All runs are kept in [`Codes/quoteguard/reports/`](Codes/quoteguard/reports/).
+- 72 backend tests on real PostgreSQL (document forensics and both integrity attacks end-to-end, negated specs, recovery after expiry, wrong/missing payee, duplicate deliveries, concurrency, webhooks, Demo Lab), frontend unit tests, Playwright journeys against the live site including a real Sandbox buyer approval and capture.
+- **Why AI:** on a separate holdout of 26 *unfamiliar* quote layouts (labels frozen before testing), the rules parser made 11/26 correct decisions; Gemini 2.5 Flash + QuoteGuard's checks made 24/26 in each of three first, unseen runs. That run also exposed one false eligibility — fixed, regression-tested, and every later run is labelled “seen” (Gemini 26/26 ×3). The live demo now runs **Claude Sonnet 5.5 via NanoGPT**: 23/26 on the (seen) holdout with **0/18 non-payable quotes marked payable** and 368/368 citations found — its three misses all fail safe (a missed subtotal twice, “fail” instead of “unknown” once). Policy-level metrics are named “non-payable cases rejected by policy”; payment-boundary behaviour is tested separately. All runs are kept in [`Codes/quoteguard/reports/`](Codes/quoteguard/reports/).
 
 ## Documentation
 
@@ -46,11 +64,11 @@ QuoteGuard reads supplier quotations, links every extracted term to the exact li
 
 ## Stack
 
-Python 3.12 · FastAPI · SQLAlchemy · Alembic · PostgreSQL · LangGraph · Gemini (OpenAI-compatible API) · PayPal Orders v2 / Payments v2 / JS SDK · React 19 · TypeScript · Vite · Tailwind CSS · TanStack Query · AG Grid Community · Playwright.
+Python 3.12 · FastAPI · SQLAlchemy · Alembic · PostgreSQL · LangGraph · Claude Sonnet 5.5 via NanoGPT (any OpenAI-compatible API) · pdfplumber/pdfminer + pypdf forensics · PayPal Orders v2 / Payments v2 / JS SDK · React 19 · TypeScript · Vite · Tailwind CSS · TanStack Query · AG Grid Community · Playwright.
 
 ## Limits
 
-Synthetic documents only; PayPal Sandbox only; one configured sandbox merchant; USD checkout; delivery dates are supplier claims; the audit hash chain is not tamper-proof against a database administrator; model output varies between runs.
+Synthetic documents only; PayPal Sandbox only; structural forensics cannot see an edit that was cleanly re-typed and re-saved with fresh metadata; one configured sandbox merchant; USD checkout; delivery dates are supplier claims; the audit hash chain is not tamper-proof against a database administrator; model output varies between runs.
 
 ## License
 

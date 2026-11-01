@@ -220,6 +220,7 @@ class Document(Base):
     is_sample: Mapped[bool] = mapped_column(Boolean, default=False)
     supplier_confirmed_by: Mapped[str | None] = mapped_column(String(120))  # set only for controlled sample fixtures
     suspicious: Mapped[list | None] = mapped_column(JSONB)
+    forensics: Mapped[dict | None] = mapped_column(JSONB)  # structural PDF forensics from the isolated parser
     uploaded_by: Mapped[uuid.UUID] = fk("users.id")
     created_at: Mapped[datetime] = created()
 

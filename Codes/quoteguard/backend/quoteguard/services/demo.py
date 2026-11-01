@@ -6,6 +6,7 @@ from what those services actually returned; nothing here declares a block in adv
 
 from __future__ import annotations
 
+import dataclasses
 import threading
 import traceback
 import uuid
@@ -94,7 +95,12 @@ def start_sample(db: Session, actor: Actor) -> PurchaseRequest:
 
 
 def _supplier(db: Session, ws_id, name: str) -> Supplier:
-    return db.execute(select(Supplier).where(Supplier.workspace_id == ws_id, Supplier.normalized_name == documents.normalize_name(name))).scalar_one()
+    sup = db.execute(select(Supplier).where(Supplier.workspace_id == ws_id, Supplier.normalized_name == documents.normalize_name(name))).scalar_one_or_none()
+    if sup is None:  # lab-only suppliers (e.g. the cover-quote scenario) are created on first use
+        sup = Supplier(workspace_id=ws_id, name=name, normalized_name=documents.normalize_name(name), created_at=timeutil.now())
+        db.add(sup)
+        db.flush()
+    return sup
 
 
 def load_sample_quotes(db: Session, actor: Actor, request_id) -> list[Document]:
@@ -148,6 +154,8 @@ SCENARIOS = {
     "malicious_pdf": "PDF with embedded instructions",
     "double_click": "Duplicate clicks and concurrent capture",
     "lost_response": "Provider timeout after a successful capture",
+    "edited_bill": "Supplier PDF edited to fit the budget",
+    "cover_quotes": "Fabricated competing quotes",
 }
 
 
@@ -183,15 +191,18 @@ def _approver(db: Session, actor: Actor) -> Actor:
     return load_actor(db, persona_user(db).id, actor.principal_id, actor.workspace_id)
 
 
-def _lab_request(actor: Actor, scenario: str, rec: _Recorder, *, adapter: str | None = None, extra_fixture: str | None = None) -> tuple[str, str]:
-    """A fresh lab request with its own ClearWave lab supplier + binding, analysed by the normal workflow."""
+def _lab_request(actor: Actor, scenario: str, rec: _Recorder, *, adapter: str | None = None, extra_fixture: str | None = None,
+                 docs: list[dict] | None = None, lab_supplier: str = "ClearWave Supplies") -> tuple[str, str]:
+    """A fresh lab request whose `lab_supplier` gets its own lab supplier + binding, analysed by the normal workflow.
+
+    `docs` replaces the three sample quotes: [{"supplier", "filename", "pdf"}]."""
     with session_scope() as db:
         req = requests_svc.create(db, actor, SAMPLE_TEXT, title=f"[Demo Lab] {SCENARIOS[scenario]}", lab_scenario=scenario)
         requests_svc.confirm(db, actor, req.id, SAMPLE_SPEC, note="Demo Lab fixture requirements")
         main = _supplier(db, actor.workspace_id, "ClearWave Supplies")
         mb = db.execute(select(MerchantBinding).where(MerchantBinding.supplier_id == main.id)).scalar_one()
         n = db.execute(select(func.count()).select_from(Supplier).where(Supplier.workspace_id == actor.workspace_id)).scalar()
-        lab = Supplier(workspace_id=actor.workspace_id, name=f"ClearWave Supplies (lab copy {n})", normalized_name=f"clearwave lab {uuid.uuid4().hex[:8]}", created_at=timeutil.now())
+        lab = Supplier(workspace_id=actor.workspace_id, name=f"{lab_supplier} (lab copy {n})", normalized_name=f"{documents.normalize_name(lab_supplier)} lab {uuid.uuid4().hex[:8]}", created_at=timeutil.now())
         db.add(lab)
         db.flush()
         a = adapter or mb.adapter
@@ -199,9 +210,10 @@ def _lab_request(actor: Actor, scenario: str, rec: _Recorder, *, adapter: str | 
                                display_label="Lab binding", status="active", verified_at=timeutil.now(), created_at=timeutil.now(), updated_at=timeutil.now()))
         db.query(DemoScenarioRun).filter(DemoScenarioRun.id == rec.run_id).update({"request_id": req.id})
         issue = timeutil.local_date(req.timezone, req.created_at)
-        for s in fixtures.main_scenario(issue):
-            sup_id = lab.id if s["key"] == "clearwave" else _supplier(db, actor.workspace_id, s["supplier"]).id
-            documents.upload(db, actor, req.id, s["filename"], fixtures.quote_pdf(s["q"]), "application/pdf", is_sample=True, supplier_id=sup_id, confirmed_by=SAMPLE_CONFIRMER)
+        items = docs or [{"supplier": s["supplier"], "filename": s["filename"], "pdf": fixtures.quote_pdf(s["q"])} for s in fixtures.main_scenario(issue)]
+        for s in items:
+            sup_id = lab.id if s["supplier"] == lab_supplier else _supplier(db, actor.workspace_id, s["supplier"]).id
+            documents.upload(db, actor, req.id, s["filename"], s["pdf"], "application/pdf", is_sample=True, supplier_id=sup_id, confirmed_by=SAMPLE_CONFIRMER)
         if extra_fixture:
             q = fixtures.lab_fixtures(issue)[extra_fixture]
             documents.upload(db, actor, req.id, f"{q['supplier'].replace(' ', '_')}_{extra_fixture}_DEMO.pdf", fixtures.quote_pdf(q), "application/pdf", is_sample=True)
@@ -210,7 +222,7 @@ def _lab_request(actor: Actor, scenario: str, rec: _Recorder, *, adapter: str | 
     with session_scope() as db:
         q = db.execute(select(Quote).where(Quote.request_id == uuid.UUID(rid), Quote.supplier_id == lab.id)).scalar_one()
         qid = str(q.id)
-    rec.step("Lab request analysed by the normal workflow", "info", "Three labelled sample quotes extracted and evaluated" + (f", plus the '{extra_fixture}' fixture" if extra_fixture else "") + ".", {"request_id": rid})
+    rec.step("Lab request analysed by the normal workflow", "info", f"{len(items)} labelled sample quotes extracted and evaluated" + (f", plus the '{extra_fixture}' fixture" if extra_fixture else "") + ".", {"request_id": rid})
     return rid, qid
 
 
@@ -329,6 +341,66 @@ def _scn_malicious_pdf(actor: Actor, rec: _Recorder):
         rec.step("Model tool permissions", "ok", "The extraction model receives page text only and returns JSON. It has no approval, payment, HTTP, file or shell tools.")
     ok = budget_ok and payee_ok and blocked and outcome["mandatory_status"] != "pass"
     return ("blocked_as_expected" if ok else "not_blocked"), ("Embedded instructions stayed data: budget, permissions and payee were unaffected. This is one fixture, not proof of immunity." if ok else "A control did not hold.")
+
+
+def _integrity_attack(actor: Actor, rec: _Recorder, rid: str, qid: str, *, what: str) -> tuple[bool, dict]:
+    """Shared tail of the integrity scenarios: counterfactual without forensics, real outcome, approval attempt."""
+    from ..domain import policy as pol
+    from . import integrity
+
+    with session_scope() as db:
+        req = db.get(PurchaseRequest, uuid.UUID(rid))
+        rv, spec = requests_svc.current_spec(db, req)
+        rows = comparison.facts(db, req)
+        report = integrity.assess(db, req, rows)
+        for f in report["findings"]:
+            if f["severity"] != "low":
+                rec.step(f["title"], "blocked" if f["severity"] == "high" else "warning", f["detail"], {"finding": f["id"], "evidence": f.get("evidence")})
+        if report.get("screens"):
+            sc = report["screens"]
+            rec.step("Bid screens (Huber & Imhof, 2019) — context only", "info",
+                     f"Coefficient of variation {sc['cv']:.3f}, relative distance {sc['rd']:.2f}" + (" — the cover-bidding shape: losing quotes bunched above an isolated winner." if sc["cover_bid_pattern"] else "."))
+        blind = [dataclasses.replace(r[2], integrity=None) for r in rows]
+        without = {o.quote_id: o for o in pol.evaluate_all(spec, blind, comparison.order_date(req))}
+        with_ = {o.quote_id: o for o in pol.evaluate_all(spec, [r[2] for r in rows], comparison.order_date(req))}
+        w0, w1 = without[qid], with_[qid]
+        rec.step("Counterfactual: the same policy without document forensics", "failed" if w0.payment_eligible else "info",
+                 f"{w0.supplier} {spec.currency} {w0.verified_total or '—'}: mandatory checks {w0.mandatory_status}, payment eligible {w0.payment_eligible}, rank {w0.compliant_rank or '—'}. {what}")
+        chk = next(c for c in w1.checks if c.key == "integrity")
+        rec.step("With forensics: Document integrity check", "blocked" if chk.status != "pass" else "failed", f"{chk.status.upper()} — {chk.detail}")
+        try:
+            ap = _approver(db, actor)
+            review = approvals.review(db, ap, rid, qid)
+            approvals.approve(db, ap, rid, qid, review["terms_hash"], note="Demo Lab approval attempt")
+            blocked, msg = False, "Approval succeeded"
+        except AppError as e:
+            blocked, msg = True, f"{e.code}: {e.message}"
+        rec.step("Approval attempt for the manipulated purchase", "blocked" if blocked else "failed", msg)
+        memo = integrity.memo(db, req, report)
+        if memo:
+            rec.step(f"AI investigator memo ({memo.get('model')})", "info", memo["headline"] + " — " + memo["explanation"], {"memo": memo})
+    return (w0.payment_eligible and chk.status != "pass" and blocked), report
+
+
+def _scn_edited_bill(actor: Actor, rec: _Recorder):
+    issue = timeutil.local_date("UTC")
+    items = [{"supplier": s["supplier"], "filename": s["filename"], "pdf": fixtures.quote_pdf(s["q"])} for s in fixtures.main_scenario(issue)]
+    items[0]["pdf"] = fixtures.edited_bill(issue)  # Northstar: $640 edited to $540 in a PDF editor
+    rec.step("Attack", "info", "Northstar Office quoted $640.00 (over the $600 budget). Someone opened the PDF in an editor and changed shipping $160.00 → $60.00 and the total to $540.00. "
+             "The arithmetic still adds up and the page looks untouched.")
+    rid, qid = _lab_request(actor, "edited_bill", rec, docs=items, lab_supplier="Northstar Office")
+    ok, _ = _integrity_attack(actor, rec, rid, qid, what="Without forensics the edited quote passes every check and beats the honest $570 quote.")
+    return ("blocked_as_expected" if ok else "not_blocked"), ("The original $640.00 was recovered from the PDF's earlier revision; the edited quote cannot be approved or paid."
+                                                             if ok else "A control did not hold.")
+
+
+def _scn_cover_quotes(actor: Actor, rec: _Recorder):
+    items = fixtures.cover_quote_set(timeutil.local_date("UTC"))
+    rec.step("Attack", "info", "Pinecrest Audio ($585) is the only quote under budget. The two 'competitors' (Alder $612, Birch $629) were produced by Pinecrest itself to make the choice look competitive.")
+    rid, qid = _lab_request(actor, "cover_quotes", rec, docs=items, lab_supplier="Pinecrest Audio")
+    ok, _ = _integrity_attack(actor, rec, rid, qid, what="Without forensics Pinecrest looks like the clear winner of a three-way competition.")
+    return ("blocked_as_expected" if ok else "not_blocked"), ("The three quotes share an author, an original file and a phone number; the staged competition is held for review."
+                                                             if ok else "A control did not hold.")
 
 
 def _sim_approved_checkout(actor: Actor, rec: _Recorder, scenario: str) -> tuple[str, str]:

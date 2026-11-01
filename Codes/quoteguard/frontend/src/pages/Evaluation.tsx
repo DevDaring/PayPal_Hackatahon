@@ -3,7 +3,7 @@ import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef } from "ag-grid-community";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { BarChart3, Download, Play, Search } from "lucide-react";
+import { BarChart3, Download, Play, Search, ShieldAlert } from "lucide-react";
 import { api, errorText } from "../lib/api";
 import { csvSafe } from "../components/CompareStep";
 import { dateTime, FIELD_LABEL } from "../lib/format";
@@ -28,6 +28,8 @@ export default function Evaluation() {
     <div>
       <PageHeader eyebrow="Evaluation" title="Measured, not claimed" subtitle="Labelled synthetic quotations. Expected labels live in a separate manifest the model never sees; every run is kept, including the bad ones."
         actions={isAdmin ? <><Button variant="secondary" loading={start.isPending && start.variables === "rules"} onClick={() => start.mutate("rules")}>Run deterministic baseline</Button><Button loading={start.isPending && start.variables === "llm"} onClick={() => start.mutate("llm")} icon={<Play className="size-4" aria-hidden />}>Run with AI model</Button></> : undefined} />
+      <IntegrityBench />
+      <h2 className="mb-3 mt-8 font-display text-[28px] text-ink">Quote extraction: rules vs. AI</h2>
       <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Dataset">
         {[["quoteguard-holdout-v1", "Holdout · unfamiliar layouts (26)", "Built independently; labels frozen before any run"], ["quoteguard-eval-v1", "Development set (24)", "Template family the parser was written against"]].map(([k, l, h]) => (
           <button key={k} role="tab" aria-selected={dataset === k} onClick={() => { setDataset(k); setSel(null); }} className={cx("rounded-xl border px-4 py-2 text-left", dataset === k ? "border-ink bg-ink text-white" : "border-line-strong bg-surface hover:bg-sunken")}>
@@ -171,6 +173,51 @@ function RulesVsAi({ runs }: { runs: any[] }) {
           ))}
         </tbody>
       </table>
+    </Card>
+  );
+}
+
+function IntegrityBench() {
+  const q = useQuery<any>({ queryKey: ["eval-integrity"], queryFn: () => api("/evaluation/integrity") });
+  const r = q.data?.run;
+  if (q.isLoading) return <Skeleton className="h-48" />;
+  if (!r) return null;
+  const s = r.summary;
+  const cats = Object.entries(s.by_category as Record<string, any>);
+  return (
+    <Card className="overflow-hidden" data-testid="integrity-bench">
+      <div className="flex flex-wrap items-start gap-4 bg-ink p-5 text-white">
+        <span className="grid size-11 place-items-center rounded-xl bg-white/10 text-teal-bright"><ShieldAlert className="size-5" aria-hidden /></span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-teal-bright">Document integrity benchmark · {r.dataset}</div>
+          <div className="mt-0.5 font-display text-[26px] leading-tight">Edited bills and staged competition, scored on {s.cases} labelled purchase cases</div>
+          <p className="mt-1 max-w-3xl text-[13px] text-white/65">Deterministic forensics ({r.analyzer}); no model involved in the verdict. Attacks are applied to the demo templates and to the 26 independently built holdout layouts. Cases we expected to miss are included and reported.</p>
+        </div>
+      </div>
+      <div className="grid gap-px bg-line sm:grid-cols-4">
+        {[[`${s.false_alarms} / ${s.controls}`, "honest cases flagged", `${s.control_documents} honest documents`],
+          [`${s.caught} / ${s.attacks}`, "attacks caught", `${s.blocked} blocked, ${s.caught - s.blocked} sent to review`],
+          [`${s.originals_recovered} / ${s.recoverable}`, "original amounts recovered", "from hidden PDF revisions"],
+          [`${s.decision_matches_label} / ${s.cases}`, "decisions match the label", "clear · review · block"]].map(([v, l, h]) => (
+          <div key={l} className="bg-surface p-4"><div className="font-display text-[34px] leading-none text-ink tnum">{v}</div><div className="mt-1 text-[13px] font-medium text-ink-2">{l}</div><div className="text-[11.5px] text-muted">{h}</div></div>
+        ))}
+      </div>
+      <div className="overflow-x-auto p-5">
+        <table className="w-full min-w-[560px] text-[13px]">
+          <thead><tr className="text-left text-[11.5px] uppercase tracking-wider text-muted"><th className="pb-2 font-semibold">Attack</th><th className="pb-2 font-semibold">Expected</th><th className="pb-2 text-right font-semibold">Caught</th><th className="pb-2 text-right font-semibold">Blocked</th></tr></thead>
+          <tbody>
+            {cats.map(([k, v]) => (
+              <tr key={k} className="border-t border-line">
+                <td className="py-1.5 text-ink">{k}</td><td className="py-1.5 text-muted">{v.expected}</td>
+                <td className={cx("tnum py-1.5 text-right font-medium", v.caught === v.cases ? "text-teal-strong" : v.caught === 0 ? "text-danger" : "text-amber")}>{v.caught}/{v.cases}</td>
+                <td className="tnum py-1.5 text-right text-ink-2">{v.blocked}/{v.cases}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {s.missed.length > 0 && <p className="mt-3 text-[12.5px] text-ink-2"><b>Missed ({s.missed.length}):</b> {s.missed.join(", ")} — a cleanly re-saved edit leaves no structural trace, and an invented competitor with fresh, unrelated metadata shares nothing to link. These limits are why approval also binds the payment to the configured PayPal merchant.</p>}
+        <p className="mt-2 text-[11.5px] text-muted">Synthetic documents; the detectors and the attack generator were written by the same team, so treat this as a regression benchmark, not a field accuracy estimate. Run {dateTime(r.finished_at)}{r.code_revision ? ` · code ${String(r.code_revision).slice(0, 7)}` : ""}.</p>
+      </div>
     </Card>
   );
 }

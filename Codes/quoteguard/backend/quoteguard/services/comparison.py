@@ -88,6 +88,12 @@ def facts(db: Session, req: PurchaseRequest) -> list[tuple[Quote, QuoteVersion, 
             attribute_sources={k[5:]: v for k, v in (qv.attributes or {}).items() if k.startswith("_src_") and v},
         )
         out.append((q, qv, f, reason))
+    if out:
+        from . import integrity
+
+        verdicts = integrity.assess(db, req, out)["per_quote"]
+        for q, _, f, _ in out:
+            f.integrity = {k: verdicts[str(q.id)][k] for k in ("status", "detail")}
     return out
 
 

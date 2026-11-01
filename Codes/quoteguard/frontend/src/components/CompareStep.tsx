@@ -10,6 +10,7 @@ import { dateOnly, money } from "../lib/format";
 import { useRoles } from "../lib/session";
 import type { CompareQuote, Comparison, RequestDetail } from "../lib/types";
 import { openFieldTarget } from "./EvidenceStep";
+import { IntegrityRadar } from "./IntegrityRadar";
 import type { EvidenceTarget } from "./EvidenceViewer";
 import { Badge, Button, Callout, Card, CheckBadge, cx, Empty, SectionTitle } from "./ui";
 
@@ -152,6 +153,8 @@ export function CompareStep({ req, cmp, onOpen }: { req: RequestDetail; cmp: Com
           </Card>
         ) : <Card className="p-5 text-sm text-muted">The cheapest priced quote is also the best compliant one.</Card>}
       </div>
+
+      <IntegrityRadar requestId={req.id} cmp={cmp} />
 
       <div>
         <SectionTitle hint="Deterministic policy · lowest verified total, then fastest delivery · click any value to open the line on the supplier's PDF" right={<div className="flex items-center gap-2"><Badge tone="neutral" icon={<Scale className="size-3" aria-hidden />}>policy v{cmp.policy.version}</Badge>

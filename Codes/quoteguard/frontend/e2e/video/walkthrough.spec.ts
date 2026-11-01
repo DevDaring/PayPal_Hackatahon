@@ -150,22 +150,50 @@ test("QuoteGuard demo walkthrough (real PayPal Sandbox)", async ({ page, context
   await pause(page, 3000);
   await still(page, "15_replay");
 
-  scene("16_demolab", "Demo Lab: run 'Amount changed after approval'");
+  scene("16_demolab_integrity", "Demo Lab: an edited bill and staged competition, run through the real services");
   await click(page, page.getByRole("link", { name: "Demo Lab", exact: true }));
   await expect(page.getByRole("heading", { name: "Try to break the payment path" })).toBeVisible();
-  await click(page, page.getByRole("button", { name: "Run" }).first());
-  await expect(page.getByText("Blocked as expected").first()).toBeVisible({ timeout: 180_000 });
-  await glide(page, page.getByText("Blocked as expected").first());
-  await pause(page, 3500);
-  await still(page, "16_demolab");
+  const card = (t: string) => page.locator("div.rounded-2xl", { has: page.getByRole("heading", { name: t }) }).first();
+  const EDITED = "Supplier PDF edited to fit the budget", COVER = "Fabricated competing quotes";
+  await click(page, card(EDITED).getByRole("button", { name: "Run" }));
+  await card(COVER).getByRole("button", { name: "Run" }).click();  // second attack runs in parallel; shown later
+  await expect(card(EDITED).getByText("Blocked as expected")).toBeVisible({ timeout: 240_000 });
+  await glide(page, card(EDITED).getByText("Counterfactual: the same policy without document forensics"));
+  await pause(page, 3000);
+  await still(page, "16_demolab_integrity");
 
-  scene("17_evaluation", "Evaluation: holdout, rules vs AI");
+  scene("17_radar_edited_bill", "Integrity Radar: original $640 recovered from the PDF's hidden revision");
+  const editedHref = await card(EDITED).getByRole("link", { name: "Open lab request" }).getAttribute("href");
+  await page.goto(`${editedHref}/compare`);
+  const radar = page.locator("[data-integrity]");
+  await expect(radar).toBeVisible({ timeout: 120_000 });
+  await expect(radar.getByText(/AI investigator memo/)).toBeVisible({ timeout: 90_000 }).catch(() => {});
+  await glide(page, radar.locator("[data-finding='revision_edit']"));
+  await pause(page, 4500);
+  await still(page, "17_radar_edited_bill");
+
+  scene("18_radar_cover_quotes", "Integrity Radar: provenance graph links the 'competitors' (author, file, phone) + bid screens");
+  await page.goto("/demo-lab");
+  await expect(card(COVER).getByText("Blocked as expected")).toBeVisible({ timeout: 240_000 });
+  const coverHref = await card(COVER).getByRole("link", { name: "Open lab request" }).getAttribute("href");
+  await page.goto(`${coverHref}/compare`);
+  await expect(radar).toBeVisible({ timeout: 120_000 });
+  await expect(radar.getByText(/AI investigator memo/)).toBeVisible({ timeout: 90_000 }).catch(() => {});
+  await glide(page, radar.getByText("Provenance graph"));
+  await pause(page, 4000);
+  await still(page, "18_radar_cover_quotes");
+  await glide(page, radar.getByText("Bid screens"));
+  await pause(page, 2500);
+
+  scene("19_evaluation", "Evaluation: integrity benchmark, then extraction rules vs AI");
   await click(page, page.getByRole("link", { name: "Evaluation", exact: true }));
-  await expect(page.getByText("Rules vs AI on these documents")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("integrity-bench")).toBeVisible({ timeout: 30_000 });
   await pause(page, 3500);
-  await still(page, "17_evaluation");
+  await still(page, "19_evaluation");
+  await glide(page, page.getByText("Rules vs AI on these documents"));
+  await pause(page, 2500);
 
-  scene("18_end", "End");
+  scene("20_end", "End");
   await pause(page, 1000);
   writeFileSync(`${OUT}/walkthrough-timeline.json`, JSON.stringify({ base_url: page.url(), viewport: "1920x1080", scenes: marks,
     note: "t_ms is milliseconds from the start of the MAIN page video. The PayPal popup is a separate .webm in raw/." }, null, 2));

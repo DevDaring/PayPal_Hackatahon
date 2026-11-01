@@ -5,8 +5,9 @@ Tax values here are synthetic fixture terms, not real-world tax advice.
 
 from __future__ import annotations
 
+import hashlib
 import io
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -76,6 +77,11 @@ def quote_pdf(q: dict) -> bytes:
         c.drawString(x, y, text)
         y -= gap
 
+    if q.get("contact"):
+        c.setFillColor(colors.white)
+        c.setFont("Helvetica", 9)
+        c.drawRightString(W - 40, H - 94, q["contact"])
+        c.setFillColor(colors.HexColor("#0f172a"))
     for label in ("quote_no", "issue_date", "valid_until", "currency", "prepared_for"):
         if q.get(label):
             line(q[label])
@@ -95,8 +101,23 @@ def quote_pdf(q: dict) -> bytes:
     c.setStrokeColor(colors.HexColor("#e2e8f0"))
     c.roundRect(44, y - box_h + 14, W - 88, box_h, 6, fill=1, stroke=1)
     y -= 4
-    for r in rows:
-        line(r, 11, r is rows[-1] and r == q.get("total"), 20, x=58)
+    retype = q.get("retype") or {}  # {"total": "Times-Roman"}: an amount re-typed in a different font
+    for k in ("subtotal", "shipping", "tax", "discount", "total"):
+        r = q.get(k)
+        if not r:
+            continue
+        bold = r is rows[-1] and r == q.get("total")
+        if k in retype and ": " in r:
+            label, amount = r.split(": ", 1)
+            font = "Helvetica-Bold" if bold else "Helvetica"
+            c.setFillColor(colors.HexColor("#0f172a"))
+            c.setFont(font, 11)
+            c.drawString(58, y, label + ": ")
+            c.setFont(retype[k], 11)
+            c.drawString(58 + c.stringWidth(label + ": ", font, 11), y, amount)
+            y -= 20
+        else:
+            line(r, 11, bold, 20, x=58)
     y -= 14
     line("Delivery & terms", 12, True, 20, color=theme["color"])
     for label in ("delivery", "shipping_terms", "payment_terms"):
@@ -114,7 +135,105 @@ def quote_pdf(q: dict) -> bytes:
     c.drawString(48, 40, "Synthetic quotation generated for the QuoteGuard demo. Not an offer. Tax values are fixture terms, not tax advice.")
     c.showPage()
     c.save()
+    return with_provenance(buf.getvalue(), q.get("meta") or provenance_for(q["supplier"], q.get("issue")), doc_id=q.get("doc_id"))
+
+
+# ---------------------------------------------------------------- provenance -------
+# Real suppliers' PDFs come from different people, tools and days. Fixtures carry deterministic,
+# supplier-specific metadata so independent quotes look independent to the integrity checks.
+_FIRST = ["Maya", "Tomas", "Priya", "Jonah", "Elena", "Kwame", "Sofia", "Daniel", "Aiko", "Marcus", "Leila", "Owen", "Nadia", "Victor", "Grace", "Ravi"]
+_LAST = ["Okafor", "Lindqvist", "Raman", "Whitfield", "Moreau", "Asante", "Kowalski", "Brennan", "Tanaka", "Delgado", "Haddad", "Fischer", "Novak", "Castillo", "Byrne", "Iyer"]
+_TOOLS = [("Microsoft Word for Microsoft 365", "Microsoft® Word for Microsoft 365"), ("LibreOffice Writer", "LibreOffice 24.2"), ("Zoho Invoice", "Zoho PDF Engine 3.1"),
+          ("QuickBooks Online", "QuickBooks PDF Service"), ("Xero", "Xero Document Renderer"), ("Google Docs", "Skia/PDF m124")]
+
+
+def provenance_for(supplier: str, issue: date | None = None) -> dict:
+    h = hashlib.sha256(supplier.encode()).digest()
+    creator, producer = _TOOLS[h[2] % len(_TOOLS)]
+    base = datetime.combine(issue or EVAL_SCENARIO_DATE, datetime.min.time())
+    created = base - timedelta(days=1 + h[3] % 6, hours=-(8 + h[4] % 9), minutes=-(h[5] % 60))
+    return {"author": f"{_FIRST[h[0] % 16]} {_LAST[h[1] % 16]}", "creator": creator, "producer": producer, "created": created}
+
+
+def _pdf_date(d: datetime) -> str:
+    return d.strftime("D:%Y%m%d%H%M%S+00'00'")
+
+
+def with_provenance(pdf: bytes, meta: dict, *, doc_id: bytes | None = None) -> bytes:
+    """Rewrite document metadata (author, tool, dates) and optionally the trailer /ID, as a single revision."""
+    from pypdf import PdfReader, PdfWriter
+    from pypdf.generic import ArrayObject, ByteStringObject
+
+    w = PdfWriter(clone_from=PdfReader(io.BytesIO(pdf)))
+    created = meta.get("created") or datetime(2026, 10, 1, 9, 0)
+    info = {"/Author": meta.get("author", ""), "/Creator": meta.get("creator", ""), "/Producer": meta.get("producer", ""),
+            "/CreationDate": _pdf_date(created), "/ModDate": _pdf_date(meta.get("modified") or created)}
+    w.add_metadata({k: v for k, v in info.items() if v})
+    first = doc_id or hashlib.md5(pdf).digest()
+    w._ID = ArrayObject([ByteStringObject(first), ByteStringObject(hashlib.md5(pdf + b"rev").digest())])
+    out = io.BytesIO()
+    w.write(out)
+    return out.getvalue()
+
+
+def _locate(pdf: bytes, token: str) -> tuple[float, float, float, float, float, str]:
+    """(x0, y_baseline, x1, page_height, size, fontname) of the first word equal to `token`."""
+    import pdfplumber
+
+    with pdfplumber.open(io.BytesIO(pdf)) as doc:
+        page = doc.pages[0]
+        for wd in page.extract_words(extra_attrs=["fontname", "size"]):
+            if wd["text"] == token:
+                return wd["x0"], page.height - wd["bottom"] + wd["size"] * 0.21, wd["x1"], page.height, wd["size"], wd["fontname"]
+    raise ValueError(f"token {token!r} not on page")
+
+
+def _patch_overlay(pdf: bytes, edits: list[tuple[str, str]], font: str | None) -> bytes:
+    """A one-page overlay that whites out each old token and types the new value over it."""
+    from reportlab.lib.pagesizes import A4 as _A4
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=_A4)
+    for old, new in edits:
+        x0, base, x1, _, size, fontname = _locate(pdf, old)
+        c.setFillColor(colors.HexColor("#f8fafc"))  # matches the totals box, so the patch is invisible on screen
+        c.rect(x0 - 1, base - size * 0.25, (x1 - x0) + 2, size * 1.15, fill=1, stroke=0)
+        c.setFillColor(colors.HexColor("#0f172a"))
+        c.setFont(font or ("Helvetica-Bold" if "Bold" in fontname else "Helvetica"), size)
+        c.drawString(x0, base, new)
+    c.showPage()
+    c.save()
     return buf.getvalue()
+
+
+def tamper_pdf(original: bytes, edits: list[tuple[str, str]], *, mode: str = "edit", incremental: bool = True, font: str | None = None,
+               producer: str = "PDF-XChange Editor 10.2", modified: datetime | None = None) -> bytes:
+    """Change amounts the two ways invoice fraud usually happens.
+
+    mode="edit":  the text is replaced inside the page content, as a PDF editor does. Visible and extracted text are clean.
+    mode="patch": an opaque box covers the old value and the new value is typed on top; the old text stays underneath.
+    incremental=True appends the change as an incremental update, so the original revision remains in the file.
+    """
+    from pypdf import PdfReader, PdfWriter
+
+    w = PdfWriter(io.BytesIO(original), incremental=True) if incremental else PdfWriter(clone_from=PdfReader(io.BytesIO(original)))
+    page = w.pages[0]
+    if mode == "edit":
+        content = page.get_contents()
+        data = content.get_data()
+        for old, new in edits:
+            o, n = old.encode(), new.encode()
+            if o not in data:
+                raise ValueError(f"{old!r} not in content stream")
+            data = data.replace(o, n)
+        content.set_data(data)
+        page.replace_contents(content)
+    else:
+        page.merge_page(PdfReader(io.BytesIO(_patch_overlay(original, edits, font))).pages[0])
+    w.add_metadata({"/Producer": producer, "/ModDate": _pdf_date(modified or datetime(2026, 11, 2, 22, 14))})
+    out = io.BytesIO()
+    w.write(out)
+    return out.getvalue()
 
 
 def image_only_pdf(q: dict) -> bytes:
@@ -157,6 +276,7 @@ def headset_quote(supplier: str, theme: str, issue: date, *, unit: str, sub: str
         "shipping_terms": "Shipping terms: Ground shipping to one business address",
         "payment_terms": "Payment terms: Payable through the buyer's approved checkout",
     }
+    q["issue"] = issue
     q.update(extra)
     return q
 
@@ -174,6 +294,40 @@ def main_scenario(issue: date) -> list[dict]:
          "q": headset_quote("Harbor Devices", "harbor", issue, unit="15.00", sub="450.00", ship="20.00", tax="0.00", total="470.00", days=5, connector="USB-A", quote_no="HD-88213",
                             shipping="Shipping (ground): $20.00")},
     ]
+
+
+def edited_bill(issue: date) -> bytes:
+    """Northstar's real quote ($640, over budget) edited in a PDF editor to $540 so it fits the $600 budget."""
+    original = quote_pdf(main_scenario(issue)[0]["q"])
+    return tamper_pdf(original, [("$160.00", "$60.00"), ("$640.00", "$540.00")], mode="edit", incremental=True,
+                      modified=datetime.combine(issue, datetime.min.time()) + timedelta(hours=21, minutes=47))
+
+
+def cover_quote_set(issue: date) -> list[dict]:
+    """A favoured supplier plus two 'competitors' it wrote itself — the cover-quote scheme.
+
+    Pinecrest is the only quote under budget. Alder and Birch exist to make that look like a competition:
+    Alder was written by Pinecrest's salesperson; Birch was saved from Alder's file and lists Pinecrest's phone number.
+    """
+    day = datetime.combine(issue - timedelta(days=2), datetime.min.time())
+    word = ("Microsoft Word for Microsoft 365", "Microsoft® Word for Microsoft 365")
+
+    def meta(author, minute):
+        return {"author": author, "creator": word[0], "producer": word[1], "created": day + timedelta(hours=10, minutes=minute)}
+
+    pine = headset_quote("Pinecrest Audio", "neutral", issue, unit="18.00", sub="540.00", ship="45.00", tax="0.00", total="585.00", days=5, quote_no="PA-30418",
+                         contact="Tel +1 (415) 555-0142 · sales@pinecrest-audio.example", meta=meta("Dana Kessler", 2))
+    alder = headset_quote("Alder Technologies", "violet", issue, unit="19.00", sub="570.00", ship="42.00", tax="0.00", total="612.00", days=6, quote_no="AT-7731",
+                          contact="Tel +1 (628) 555-0199 · quotes@aldertech.example", meta=meta("Dana Kessler", 9))
+    alder_pdf = quote_pdf(alder)
+    import re as _re
+
+    alder_id = bytes.fromhex(_re.search(rb"/ID\s*\[\s*<([0-9a-fA-F]+)>", alder_pdf).group(1).decode())
+    birch = headset_quote("Birch & Co Supply", "harbor", issue, unit="19.50", sub="585.00", ship="44.00", tax="0.00", total="629.00", days=5, quote_no="BCS-0912",
+                          contact="Tel +1 (415) 555-0142 · orders@birchsupply.example", meta=meta("Accounts", 14), doc_id=alder_id)
+    return [{"supplier": "Pinecrest Audio", "filename": "Pinecrest_Audio_quote_DEMO.pdf", "pdf": quote_pdf(pine), "favoured": True},
+            {"supplier": "Alder Technologies", "filename": "Alder_Technologies_quote_DEMO.pdf", "pdf": alder_pdf, "favoured": False},
+            {"supplier": "Birch & Co Supply", "filename": "Birch_Co_Supply_quote_DEMO.pdf", "pdf": quote_pdf(birch), "favoured": False}]
 
 
 def lab_fixtures(issue: date) -> dict[str, dict]:

@@ -7,11 +7,12 @@ Four kinds of evidence, kept separate:
 | Deterministic tests | Policy, arithmetic, snapshot hashing, authorization, concurrency, webhooks, Demo Lab | `cd backend && .venv/bin/pytest -q` | No — in-memory fake provider with PayPal-Request-Id semantics | No (`MOCK_AI`) |
 | Mocked integration tests | Full services on real PostgreSQL (`quoteguard_test`, schema built by the Alembic migration) with the fake provider | same suite | No | No |
 | Live AI evaluation | 24 labelled synthetic quotes through the extraction + policy pipeline | `python -m quoteguard.cli run-eval llm` (or the Evaluation page) | No | Yes |
+| Integrity benchmark | 82 labelled purchase cases: honest controls and manipulated documents | `python -m quoteguard.cli run-integrity-bench ../reports` (Evaluation page shows the latest) | No | No — deterministic |
 | Actual sandbox checks | Real PayPal Sandbox calls | manual checklist below + Playwright journey | **Yes** | Yes |
 
 ## Results — 1 November 2026 (final revision)
 
-**Backend (pytest 9.2, PostgreSQL 16):** `61 passed` (~54 s). Beyond the brief's 18 checks: negated/conditional/conflicting specifications at the policy layer and end-to-end (PDF → extraction → approval rejected, from a supplier *with* a configured merchant); recovery after approval expiry (no new capture), recovery with valid approval under 4 racing deliveries (one capture, one request id), recovery against wrong payee / missing payee / wrong operation / changed amount (no capture), an existing capture recorded after expiry, missing payee in normal capture; Agent Toolkit tool scoping; regressions from the holdout.
+**Backend (pytest 9.2, PostgreSQL 16):** `72 passed` (~67 s). Integrity tests: clean sample is clear; original amounts recovered from an incremental edit; white-box patch, retyped amount and insider authorship each detected; cover-quote set linked by author, document ID, phone and creation time with the cover-bid screen; honest suppliers on the same invoicing software *not* linked; the AI memo is discarded when it states a number absent from the findings; and a regression for a self-deadlock found live (row lock held across the model call while the call logger referenced the request) — the test fails on the old code. Both Demo Lab integrity scenarios run end-to-end. Beyond the brief's 18 checks: negated/conditional/conflicting specifications at the policy layer and end-to-end (PDF → extraction → approval rejected, from a supplier *with* a configured merchant); recovery after approval expiry (no new capture), recovery with valid approval under 4 racing deliveries (one capture, one request id), recovery against wrong payee / missing payee / wrong operation / changed amount (no capture), an existing capture recorded after expiry, missing payee in normal capture; Agent Toolkit tool scoping; regressions from the holdout.
 
 | # (brief §14) | Test |
 |---|---|
@@ -37,9 +38,9 @@ Four kinds of evidence, kept separate:
 
 Bugs these tests found and fixed during the build: an inverted lock order between payment and request rows (deadlock under concurrent refunds/captures), stale optimistic-lock versions on locking reads, and a crash when correcting a quote's total.
 
-**Frontend:** `npm test` → 3 passed (Vitest). `tsc -b` clean. Production build succeeds.
+**Frontend:** `npm test` → 4 passed (Vitest). `tsc -b` clean. Production build succeeds.
 
-**End-to-end (Playwright, Chromium) against https://quoteguard.koushikdeb.com:** 1 passed (≈26 s) — jury sign-in → sample request → confirm → 3 PDFs extracted by Gemini → comparison (ClearWave recommended, Harbor's USB-A shown) → evidence drawer highlights Northstar's $160 shipping line → what-if $560 shows “no compliant quote” → role switch → approval → checkout renders official PayPal Sandbox buttons.
+**End-to-end (Playwright, Chromium) against https://quoteguard.koushikdeb.com, after the provider switch:** 7 passed — Agent Mode ×2, the journey, Demo Lab + screens, mobile, a **real PayPal Sandbox buyer approval and capture**, and `integrity.spec.ts` (edited bill caught, $640.00 recovered, counterfactual payable at rank 1, approval refused). The journey: jury sign-in → sample request → confirm → 3 PDFs extracted by the model → comparison (ClearWave recommended, Harbor's USB-A shown) → evidence drawer highlights Northstar's $160 shipping line → what-if $560 shows “no compliant quote” → role switch → approval → checkout renders official PayPal Sandbox buttons.
 
 ### Live AI evaluation (dataset `quoteguard-eval-v1`, 24 cases, scenario clock 2026-11-02)
 
@@ -71,8 +72,11 @@ Built by a separate generator (`backend/quoteguard/holdout.py`) with different w
 | 07:43–07:47 (unseen) | gemini-2.5-flash ×3 | 24/26 each | **1/18 each** | 1/8 each | 377/377, 380/380, 380/380 | 9/26 | ≈4.9 s | ≈47k |
 | 07:57 after fixes (seen) | rules | 12/26 | 0/18 | 8/8 | 147/147 | 22/26 | 24 ms | 0 |
 | 07:57–08:03 after fixes (seen) | gemini-2.5-flash ×3 | 26/26 each | 0/18 | 0/8 | 379/379, 380/380, 377/377 | 8/26 | ≈4.9–5.7 s | ≈47k |
+| 10:43 provider switch (seen) | anthropic/claude-sonnet-5.5 via NanoGPT | 23/26 | **0/18** | 1/8 | 368/368 | — | ≈7.1 s | — |
 
-Development set on the final revision (08:05): rules 24/24, Gemini 24/24, 0 false eligibility, 0 false blocks. Reports: `reports/evaluation-20261101-*`.
+The live demo switched from Gemini to **Claude Sonnet 5.5 via NanoGPT** on 1 November (no GCP keys). Its three disagreements all fail safe: `ho-twopage-clean` and `ho-revised-over` missed the subtotal (→ unknown; the first is the one payable quote blocked), and `ho-letter-mic-optional` was assessed “fail” instead of “unknown”. We did not tune prompts on the holdout after this run.
+
+Development set on the final revision (08:05): rules 24/24, Gemini 24/24, 0 false eligibility, 0 false blocks. After the provider switch (10:46): Claude Sonnet 5.5 24/24, 0/18 non-payable marked payable, 0/6 payable blocked, 379/380 citations valid. Reports: `reports/evaluation-20261101-*`.
 
 The unseen false eligibility (`ho-letter-3.5mm`: “charges over USB-C; audio connects through the 3.5 mm jack”) exposed two general defects in the specification checker — clauses were split on the decimal point in “3.5 mm”, hiding the conflicting connector, and plural terms (“microphones”) were not matched, causing the one false block. Both were fixed with regression tests; runs after the fix are labelled **seen** in the stored config and in the UI, and must not be described as unseen. What the holdout shows: on unfamiliar layouts the rules parser fails safe but blocks almost everything payable, while the model plus deterministic checks reads them correctly; the checks — not the model — are what keep a misread from becoming payable.
 
@@ -93,3 +97,20 @@ Status as of 1 Nov 2026 — **full real-sandbox purchase verified** with US-regi
 | Partial refund | Receipt → Partial refund (admin) | ⏳ run manually after a capture |
 
 Webhook simulator note: events sent from the PayPal dashboard simulator are not tied to a real order and their signature verification semantics differ from app-generated events, so they are not used as proof of a transaction.
+
+## Document integrity benchmark — `quoteguard-integrity-v1` (1 November 2026)
+
+Deterministic analyzer `integrity-v1`; identical results locally and on the live server (`reports/integrity-*.json`, digest `ec06707f2857916e`).
+
+| Group | Cases | Result |
+|---|---|---|
+| Honest controls (sample set, all 26 holdout layouts as single documents, 8 honest three-supplier groups built from holdout layouts with independent metadata, 2 pairs of honest suppliers on the same invoicing software and template, a harmless metadata-only re-save) | 38 (60 documents) | **0 flagged** |
+| Edited bill — PDF editor, incremental save | 3 | 3 blocked, original recovered 3/3 |
+| Edited bill — white-box patch, flattened | 3 | 3 blocked |
+| Edited bill — amount retyped in another font | 3 | 3 sent to review (expected) |
+| Edited bill on holdout layouts — incremental / white-box | 12 / 12 | 12 / 12 blocked; originals recovered 12/12 |
+| Staged competition — shared author, copied file, shared phone, shared email, written by the requester, demo set | 6 | 6 blocked |
+| Staged competition — same tool, minutes apart only | 1 | sent to review (expected) |
+| **Hard, expected misses** — edit cleanly re-saved as a new file (×3); invented competitors with fresh, unrelated metadata (×1) | 4 | **not caught** |
+
+Totals: 40/44 attacks caught (36 blocked), 0/38 false alarms, 78/82 decisions match the label, 15/15 originals recovered. Caveats: synthetic documents, and the attack generator and detectors were written by the same team — this is a regression benchmark, not a field accuracy estimate. Thresholds were not tuned after the first run.

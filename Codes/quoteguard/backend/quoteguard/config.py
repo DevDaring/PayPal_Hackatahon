@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     MAX_UPLOAD_MB: int = 10
     MAX_PDF_PAGES: int = 20
 
-    AI_PROVIDER: str = "none"  # gemini | openai | openrouter | none
+    AI_PROVIDER: str = "none"  # nanogpt | openai | openrouter | gemini | none (OpenAI-compatible chat completions)
     AI_BASE_URL: str = ""
     AI_API_KEY: str = ""  # comma-separated keys are rotated on rate limits
     AI_MODEL: str = ""

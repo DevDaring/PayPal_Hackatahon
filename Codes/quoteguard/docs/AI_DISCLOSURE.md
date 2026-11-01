@@ -4,13 +4,16 @@
 
 | Purpose | Model (live demo) | Configurable via |
 |---|---|---|
-| Requirement drafting from plain language | `gemini-2.5-flash` via Gemini's OpenAI-compatible endpoint | `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL`, `AI_API_KEY` |
+| Requirement drafting from plain language | `anthropic/claude-sonnet-5.5` via NanoGPT's OpenAI-compatible endpoint (`https://nano-gpt.com/api/v1`) | `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL`, `AI_API_KEY` |
 | Quote term extraction with citations | same | same |
 | Plain-English explanation of the computed comparison | same | same |
 | Q&A side panel grounded in one request's evidence | same | same |
 | OCR of image-only PDFs (optional) | same model, vision input | `OCR_PROVIDER`, `OCR_MODEL` |
+| Integrity investigator memo (explains forensic findings; never decides) | same | same |
 
-Any OpenAI-compatible provider works (OpenAI, OpenRouter). With no provider configured, or `MOCK_AI=true`, the deterministic extractor and template explanations are used and the UI says so.
+Until 1 November 2026 the live demo used `gemini-2.5-flash` through Gemini's OpenAI-compatible endpoint; the evaluation runs from that period are kept and labelled with that model. **Document integrity verdicts use no model at all** — they come from deterministic forensics (`documents/integrity.py`). The memo is discarded if it states any number that is not in the findings.
+
+Any OpenAI-compatible provider works (NanoGPT, OpenAI, OpenRouter, Gemini). With no provider configured, or `MOCK_AI=true`, the deterministic extractor and template explanations are used and the UI says so.
 
 ## PayPal Agent Toolkit (read-only, server-scoped)
 

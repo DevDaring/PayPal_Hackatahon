@@ -14,10 +14,10 @@ from .attributes import assess
 from .requirements import RequirementSpec
 
 POLICY_NAME = "quoteguard-default"
-POLICY_VERSION = 1
+POLICY_VERSION = 2
 POLICY_RULES = {
     "ranking": ["verified_total_asc", "delivery_days_asc"],
-    "mandatory": ["currency", "quantity", "cost_known", "budget", "delivery", "validity", "attributes"],
+    "mandatory": ["currency", "quantity", "cost_known", "budget", "delivery", "validity", "attributes", "integrity"],
     "payment_eligibility": "all mandatory pass AND amounts verified AND not expired AND checkout configured AND currency supported",
     "excluded_ranking_inputs": ["demographics", "language", "inferred nationality"],
 }
@@ -44,6 +44,7 @@ class QuoteFacts:
     scalable_pricing: bool = False
     flat_shipping: bool = False
     attribute_sources: dict = field(default_factory=dict)  # attribute key -> cited source sentence
+    integrity: dict | None = None  # {"status", "detail"} from documents.integrity; None when not assessed (pure-policy callers)
 
 
 @dataclass
@@ -170,6 +171,9 @@ def evaluate(spec: RequirementSpec, f: QuoteFacts, order_date: date, quantity_ov
     for c in spec.mandatory:
         status, detail = assess(c, (f.attributes or {}).get(c.key), (f.attribute_sources or {}).get(c.key))
         checks.append(Check(f"attr:{c.key}", c.label, status, detail, [f"attr:{c.key}"]))
+
+    if f.integrity is not None:
+        checks.append(Check("integrity", "Document integrity", f.integrity["status"], f.integrity["detail"], []))
 
     statuses = {c.status for c in checks}
     mandatory = "fail" if "fail" in statuses else ("unknown" if "unknown" in statuses else "pass")

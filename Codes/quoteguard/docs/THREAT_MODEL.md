@@ -15,6 +15,19 @@ Scope: the purchase path from supplier document to PayPal Sandbox capture. Asset
 
 Suspicious-text detection (`documents/injection.py`) is an informative signal shown to reviewers. It is **not** the control: the controls above apply whether or not a pattern matches. A few fixtures do not prove immunity to prompt injection.
 
+## 1b. Document manipulation by people (edited bills, staged competition)
+
+| Threat | Control | Evidence |
+|---|---|---|
+| A quote is edited after the supplier issued it (price lowered to fit a budget, shipping removed, details changed) | Incremental-update recovery: earlier PDF revisions are re-parsed in the sandbox and diffed against what is shown; money or payment-detail changes are **high** → `integrity` check fails | `test_integrity_recovers_original_amounts_from_incremental_edit`, Demo Lab *edited_bill*, benchmark 15/15 recovered |
+| Old value hidden under a white box with a new value typed on top | Opaque shapes drawn after the text they cover (content-stream order) → high | `test_integrity_single_document_detectors[patch]` |
+| Amount retyped in another font | Font outlier vs. its label and every other amount → medium (review) | `...[retype]` |
+| Fake "competing" quotes so a favoured supplier wins (cover quotes) | Provenance graph across different suppliers: shared original document ID, author, phone, email or bank details → high; same tool minutes apart → medium; template resemblance and bid screens (CV, relative distance) → context only. A high cluster fails those quotes and holds the rest of the comparison for review | `test_integrity_links_fabricated_competition_and_bid_screens`, Demo Lab *cover_quotes* |
+| A supplier quote written by someone in the buying workspace | Document author matched against workspace members → high | `...[author]` |
+| Honest suppliers flagged | Shared software/template alone is never decisive; benchmark: 0 / 38 honest cases flagged | `test_integrity_same_invoicing_software_is_not_collusion` |
+
+**Limits:** an edit that is cleanly re-typed and saved as a new file with fresh metadata, or an invented competitor that shares nothing with the favoured supplier, leaves no structural trace (4 deliberate misses in the benchmark). Metadata can be forged by a careful attacker; the radar raises the cost of the common, careless frauds. Payee identity remains bound to admin-managed merchant bindings regardless.
+
 ## 2. Approval bypass
 
 | Threat | Control |

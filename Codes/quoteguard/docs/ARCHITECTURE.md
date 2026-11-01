@@ -12,7 +12,7 @@ flowchart TB
     FS[(Private document storage)]
     DB[(PostgreSQL<br/>users · requests · versions · evidence · approvals<br/>payment operations · jobs · webhooks · audit)]
   end
-  LLM[[Gemini / OpenAI-compatible model]]
+  LLM[[Claude Sonnet 5.5 via NanoGPT<br/>OpenAI-compatible API]]
   PP[(PayPal Sandbox<br/>Orders v2 · Payments v2 · Webhooks)]
 
   UI -- "/api, HttpOnly session cookie + X-CSRF-Token" --> API
@@ -60,4 +60,5 @@ Request, approval and payment states are separate columns with CHECK constraints
 - **Opaque server sessions instead of JWT** — revocable, and the acting persona is server state.
 - **Page images rendered server-side (pypdfium2)** with bounding boxes from pdfplumber instead of shipping pdf.js — smaller client and no PDF parsing in the browser.
 - **AG Grid Community** only; no enterprise license key required.
-- **Gemini through its OpenAI-compatible endpoint**, so the same adapter works with OpenAI or OpenRouter by changing `AI_BASE_URL`/`AI_MODEL`.
+- **One OpenAI-compatible adapter** (live: Claude Sonnet 5.5 via NanoGPT; previously Gemini 2.5 Flash), so the provider changes with `AI_BASE_URL`/`AI_MODEL` only.
+- **Forensics inside the sandboxed parser.** The same resource-limited child process that extracts text also records PDF metadata, the trailer document ID, earlier incremental revisions (re-parsed), opaque shapes drawn over text in content-stream order, and the font of every amount. `documents/integrity.py` turns that into findings and a cross-supplier provenance graph; the result is the `integrity` policy check (high → fail, medium → unknown). No model is involved in the verdict.

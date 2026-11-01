@@ -32,7 +32,7 @@ function deriveStages(r: RequestDetail | null, cmp: Comparison | null): Stage[] 
   const st = (c: boolean, s1: St, s2: St): St => (c ? s1 : s2);
 
   return [
-    { key: "understand", title: "Understand the request", sub: "Gemini drafts typed requirements from plain English", icon: Bot, state: r ? (r.draft?.spec ? "done" : "error") : "idle", note: r && !r.draft?.spec ? (r.draft?.problems ?? []).join(" ") : undefined },
+    { key: "understand", title: "Understand the request", sub: "The model drafts typed requirements from plain English", icon: Bot, state: r ? (r.draft?.spec ? "done" : "error") : "idle", note: r && !r.draft?.spec ? (r.draft?.problems ?? []).join(" ") : undefined },
     { key: "confirm", title: "Confirm requirements", sub: "Nothing counts until a person confirms (editable)", icon: UserCheck, consent: "Consent 1 of 3", state: !r?.draft?.spec ? "idle" : st(confirmed, "done", "gate") },
     { key: "gather", title: "Gather supplier quotes", sub: "Your PDFs, or the labelled sample quotes", icon: PackageOpen, state: !confirmed ? "idle" : st(docs.length > 0, "done", "gate") },
     { key: "read", title: "Read & cite every term", sub: "Each value must point to a verbatim line on its page", icon: FileSearch,

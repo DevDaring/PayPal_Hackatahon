@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Archive, Ban, Check, CircleAlert, CopyCheck, FileWarning, FlaskConical, Info, Loader2, Play, Shuffle, TimerOff, X } from "lucide-react";
+import { Archive, Ban, Check, CircleAlert, CopyCheck, FileSearch, FileWarning, FlaskConical, Info, Loader2, Network, Play, Shuffle, TimerOff, X } from "lucide-react";
 import { api, errorText, post } from "../lib/api";
 import { dateTime } from "../lib/format";
 import { Badge, Button, Callout, Card, cx, PageHeader, Skeleton } from "../components/ui";
@@ -12,6 +12,8 @@ const META: Record<string, { icon: any; blurb: string; expect: string }> = {
   malicious_pdf: { icon: FileWarning, blurb: "A quote PDF tells the AI to ignore the budget, approve immediately and pay a different email.", expect: "Text stays data; budget, permissions and payee unchanged" },
   double_click: { icon: CopyCheck, blurb: "Five simultaneous ‘Pay’ clicks, then five simultaneous capture requests.", expect: "One payment operation, one provider capture" },
   lost_response: { icon: TimerOff, blurb: "The provider performs the capture but its response is discarded, as if the network dropped it.", expect: "Payment becomes ‘reconciling’, then recovers by lookup" },
+  edited_bill: { icon: FileSearch, blurb: "Northstar's real $640 quote is opened in a PDF editor and changed to $540 so it fits the $600 budget. The page looks untouched and the arithmetic adds up.", expect: "Original $640 recovered from the file's hidden revision; approval blocked" },
+  cover_quotes: { icon: Network, blurb: "The only quote under budget comes with two ‘competitors’ that its own salesperson wrote, to make the choice look competitive.", expect: "Shared author, file and phone exposed; staged competition held" },
 };
 const VERDICT: Record<string, { label: string; tone: "good" | "bad" | "warn" }> = {
   blocked_as_expected: { label: "Blocked as expected", tone: "good" }, one_operation: { label: "One logical operation", tone: "good" }, recovered: { label: "Recovered safely", tone: "good" },
@@ -65,6 +67,9 @@ export default function DemoLab() {
                             <div className="min-w-0">
                               <div className="font-medium text-ink">{st.title}{st.status === "blocked" && <span className="ml-1.5 text-[11px] font-semibold uppercase text-teal">blocked</span>}</div>
                               {st.detail && <div className="text-[12.5px] text-ink-2">{st.detail}</div>}
+                              {st.data?.evidence?.changes?.length > 0 && (
+                                <ul className="mt-1 grid gap-0.5 rounded-lg bg-sunken px-2 py-1.5 font-mono text-[11px] text-ink-2">{st.data.evidence.changes.slice(0, 4).map((c: any, k: number) => <li key={k}><span className="text-teal-strong">{c.before}</span> → <b className="text-danger">{c.after}</b></li>)}</ul>
+                              )}
                               {st.data?.changes?.length > 0 && (
                                 <ul className="mt-1 grid gap-0.5 rounded-lg bg-sunken px-2 py-1.5 font-mono text-[11px] text-ink-2">{st.data.changes.slice(0, 4).map((c: any, k: number) => <li key={k}>{c.field}: {String(c.approved)} → <b className="text-danger">{String(c.current)}</b></li>)}</ul>
                               )}

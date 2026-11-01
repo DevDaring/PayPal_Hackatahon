@@ -17,7 +17,8 @@ Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). Quo
 | Step | What happens | Where the trust comes from |
 |---|---|---|
 | 1. Describe | “Buy 30 USB-C headsets… $600 incl. shipping… within seven days” becomes typed requirements | A person confirms every value; relative dates are resolved in `Asia/Kolkata`, stored in UTC |
-| 2. Extract | Gemini (OpenAI-compatible endpoint) extracts terms from untrusted PDF text | Each value must cite a verbatim line on a page; we verify it is there, locate its bounding box, check the number appears in it, and cross-check against a deterministic parser |
+| 2. Extract | Claude Sonnet 5.5 via NanoGPT (any OpenAI-compatible endpoint) extracts terms from untrusted PDF text | Each value must cite a verbatim line on a page; we verify it is there, locate its bounding box, check the number appears in it, and cross-check against a deterministic parser |
+| 2b. Integrity Radar | Hidden PDF revisions recovered, white-box patches and retyped amounts found, "competing" quotes linked by shared author / file / phone / email / bank details; bid-rigging screens (Huber & Imhof, 2019) | Deterministic forensics in the sandboxed parser; high severity fails the `integrity` policy check. Benchmark: 0/38 honest cases flagged, 40/44 attacks caught, 15/15 originals recovered (`reports/integrity-*.json`) |
 | 3. Compare | Totals, connector, delivery, validity, currency evaluated per quote | Decimal arithmetic and pass / fail / **unknown** — missing evidence is never a pass. The LLM only phrases the result |
 | 4. Approve | Approver signs the exact purchase | Canonical JSON snapshot (supplier, quote version, items, amounts, merchant, policy, expiry) → SHA-256; self-approval disabled |
 | 5. Pay | PayPal Sandbox order + buyer approval + capture | Order built only from the stored snapshot; snapshot re-validated before order creation and before capture; stable `PayPal-Request-Id` per operation |
@@ -37,7 +38,7 @@ flowchart LR
   B -- PayPal JS SDK (buyer approval only) --> PP[(PayPal Sandbox)]
   API -- jobs table --> W[Worker · LangGraph analysis, reconciliation, webhooks]
   API & W --> DB[(PostgreSQL · authoritative state)]
-  W -- page text only, JSON out --> LLM[Gemini via OpenAI-compatible API]
+  W -- page text only, JSON out --> LLM[Claude Sonnet 5.5 via NanoGPT]
   API & W -- Orders v2 / Payments v2, server credentials --> PP
   PP -- signed webhooks --> API
 ```
@@ -62,7 +63,7 @@ docs/, submission/  documentation, Devpost copy, demo script
 
 ## Quick start (local)
 
-Prerequisites: Docker, Python 3.12, Node 20+, a PayPal Developer **sandbox** app (client ID/secret), optionally a Gemini/OpenAI/OpenRouter key.
+Prerequisites: Docker, Python 3.12, Node 20+, a PayPal Developer **sandbox** app (client ID/secret), optionally a NanoGPT/OpenAI/OpenRouter/Gemini key.
 
 ```bash
 cp .env.example .env            # fill in secrets; keep PAYPAL_MODE=sandbox
@@ -95,10 +96,11 @@ On the **Pay** step, click *Pay with PayPal* and sign in with a PayPal **sandbox
 ## Tests and evaluation
 
 ```bash
-cd backend && .venv/bin/pytest -q                  # 61 tests on real PostgreSQL (payments, recovery, authorization, negated specs, concurrency, webhooks, Demo Lab)
+cd backend && .venv/bin/pytest -q                  # 72 tests on real PostgreSQL (payments, recovery, authorization, negated specs, document forensics, concurrency, webhooks, Demo Lab)
 cd frontend && npm test                            # unit tests (Vitest)
 BASE_URL=https://quoteguard.koushikdeb.com npx playwright test   # critical journey up to the PayPal buttons
 cd backend && .venv/bin/python -m quoteguard.cli run-eval llm quoteguard-holdout-v1   # 26 unfamiliar quotes (also: rules, quoteguard-eval-v1)
+cd backend && .venv/bin/python -m quoteguard.cli run-integrity-bench ../reports   # document-forensics benchmark (82 labelled cases, deterministic)
 ```
 
 Latest measured results are in [`docs/TESTING.md`](docs/TESTING.md) and [`reports/`](reports/).

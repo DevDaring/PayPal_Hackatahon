@@ -1,0 +1,1521 @@
+{
+  "version": "quoteguard-integrity-v1",
+  "analyzer": "integrity-v1",
+  "summary": {
+    "controls": 38,
+    "control_documents": 60,
+    "false_alarms": 0,
+    "attacks": 44,
+    "caught": 40,
+    "blocked": 36,
+    "decision_matches_label": 78,
+    "cases": 82,
+    "originals_recovered": 15,
+    "recoverable": 15,
+    "by_category": {
+      "edited bill: PDF editor, incremental save": {
+        "cases": 3,
+        "caught": 3,
+        "blocked": 3,
+        "expected": "block"
+      },
+      "edited bill: white-box patch, flattened": {
+        "cases": 3,
+        "caught": 3,
+        "blocked": 3,
+        "expected": "block"
+      },
+      "edited bill: clean full re-save (hard)": {
+        "cases": 3,
+        "caught": 0,
+        "blocked": 0,
+        "expected": "block"
+      },
+      "edited bill: amount retyped in another font": {
+        "cases": 3,
+        "caught": 3,
+        "blocked": 0,
+        "expected": "review"
+      },
+      "edited bill on holdout layout: incremental": {
+        "cases": 12,
+        "caught": 12,
+        "blocked": 12,
+        "expected": "block"
+      },
+      "edited bill on holdout layout: white-box patch": {
+        "cases": 12,
+        "caught": 12,
+        "blocked": 12,
+        "expected": "block"
+      },
+      "fabricated competition: author + file + phone": {
+        "cases": 1,
+        "caught": 1,
+        "blocked": 1,
+        "expected": "block"
+      },
+      "fabricated competition: shared author": {
+        "cases": 1,
+        "caught": 1,
+        "blocked": 1,
+        "expected": "block"
+      },
+      "fabricated competition: copied from the same file": {
+        "cases": 1,
+        "caught": 1,
+        "blocked": 1,
+        "expected": "block"
+      },
+      "fabricated competition: shared phone number": {
+        "cases": 1,
+        "caught": 1,
+        "blocked": 1,
+        "expected": "block"
+      },
+      "fabricated competition: shared email address": {
+        "cases": 1,
+        "caught": 1,
+        "blocked": 1,
+        "expected": "block"
+      },
+      "fabricated competitor written by the requester": {
+        "cases": 1,
+        "caught": 1,
+        "blocked": 1,
+        "expected": "block"
+      },
+      "fabricated competition: same tool, minutes apart only": {
+        "cases": 1,
+        "caught": 1,
+        "blocked": 0,
+        "expected": "review"
+      },
+      "fabricated competition: fresh, unrelated metadata (hard)": {
+        "cases": 1,
+        "caught": 0,
+        "blocked": 0,
+        "expected": "block"
+      }
+    },
+    "missed": [
+      "atk-edit-flat-northstar",
+      "atk-edit-flat-clearwave",
+      "atk-edit-flat-harbor",
+      "atk-cover-clean-metadata"
+    ],
+    "false_alarm_cases": [],
+    "digest": "ec06707f2857916e"
+  },
+  "cases": [
+    {
+      "case_id": "ctl-sample-set",
+      "category": "honest competition",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.1526,
+        "rd": 2.02,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "ctl-ho-letter-clean",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-letter-over",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-letter-no-mic",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-letter-usba",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-letter-carriage-tbc",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-letter-tax-extra",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-letter-mic-optional",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-letter-3.5mm",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-letter-injection",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-letter-remit-email",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-letter-dollars",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-table-clean",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-table-late",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-table-expired",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-table-qty25",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-table-discount",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-table-contradictory",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-table-bundle",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-twopage-clean",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-twopage-no-validity",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-revised-pass",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-revised-over",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-optional-warranty",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-optional-express",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-eur",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-scanned-letter",
+      "category": "honest single document (holdout layout)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "ctl-ho-group-1",
+      "category": "honest competition (holdout layouts)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.1021,
+        "rd": 1.088,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "ctl-ho-group-2",
+      "category": "honest competition (holdout layouts)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.0445,
+        "rd": 2.828,
+        "cover_bid_pattern": true,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "ctl-ho-group-3",
+      "category": "honest competition (holdout layouts)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.1407,
+        "rd": 0.051,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "ctl-ho-group-4",
+      "category": "honest competition (holdout layouts)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.0658,
+        "rd": 1.061,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "ctl-ho-group-5",
+      "category": "honest competition (holdout layouts)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.0873,
+        "rd": 1.768,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "ctl-ho-group-6",
+      "category": "honest competition (holdout layouts)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.0106,
+        "rd": null,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "ctl-ho-group-7",
+      "category": "honest competition (holdout layouts)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.0424,
+        "rd": 1.414,
+        "cover_bid_pattern": true,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "ctl-ho-group-8",
+      "category": "honest competition (holdout layouts)",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.0245,
+        "rd": 0.354,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "ctl-same-software-1",
+      "category": "honest: same invoicing software & template",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 2
+    },
+    {
+      "case_id": "ctl-same-software-2",
+      "category": "honest: same invoicing software & template",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": null,
+      "documents": 2
+    },
+    {
+      "case_id": "ctl-metadata-only-update",
+      "category": "honest: re-saved without content change",
+      "kind": "control",
+      "expected": "clear",
+      "decision": "clear",
+      "target_status": null,
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.1526,
+        "rd": 2.02,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-edit-inc-northstar",
+      "category": "edited bill: PDF editor, incremental save",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.1105,
+        "rd": 23.57,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-patch-flat-northstar",
+      "category": "edited bill: white-box patch, flattened",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.1105,
+        "rd": 23.57,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-edit-flat-northstar",
+      "category": "edited bill: clean full re-save (hard)",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "clear",
+      "target_status": "pass",
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.1105,
+        "rd": 23.57,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-retype-northstar",
+      "category": "edited bill: amount retyped in another font",
+      "kind": "attack",
+      "expected": "review",
+      "decision": "review",
+      "target_status": "unknown",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "font_outlier",
+          "severity": "medium",
+          "title": "Amount typed in a different font"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.1526,
+        "rd": 2.02,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-edit-inc-clearwave",
+      "category": "edited bill: PDF editor, incremental save",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.1634,
+        "rd": 0.479,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-patch-flat-clearwave",
+      "category": "edited bill: white-box patch, flattened",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.1634,
+        "rd": 0.479,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-edit-flat-clearwave",
+      "category": "edited bill: clean full re-save (hard)",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "clear",
+      "target_status": "pass",
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.1634,
+        "rd": 0.479,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-retype-clearwave",
+      "category": "edited bill: amount retyped in another font",
+      "kind": "attack",
+      "expected": "review",
+      "decision": "review",
+      "target_status": "unknown",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "font_outlier",
+          "severity": "medium",
+          "title": "Amount typed in a different font"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.1526,
+        "rd": 2.02,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-edit-inc-harbor",
+      "category": "edited bill: PDF editor, incremental save",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.2035,
+        "rd": 2.97,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-patch-flat-harbor",
+      "category": "edited bill: white-box patch, flattened",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.2035,
+        "rd": 2.97,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-edit-flat-harbor",
+      "category": "edited bill: clean full re-save (hard)",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "clear",
+      "target_status": "pass",
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.2035,
+        "rd": 2.97,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-retype-harbor",
+      "category": "edited bill: amount retyped in another font",
+      "kind": "attack",
+      "expected": "review",
+      "decision": "review",
+      "target_status": "unknown",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "font_outlier",
+          "severity": "medium",
+          "title": "Amount typed in a different font"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.1526,
+        "rd": 2.02,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-ho-edit-ho-letter-clean",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-letter-clean",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        },
+        {
+          "kind": "font_outlier",
+          "severity": "medium",
+          "title": "Amount typed in a different font"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-letter-over",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-letter-over",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-letter-no-mic",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-letter-no-mic",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-letter-usba",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-letter-usba",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-letter-mic-optional",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-letter-mic-optional",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-letter-3.5mm",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-letter-3.5mm",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-letter-injection",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-letter-injection",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-letter-remit-email",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-letter-remit-email",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-letter-dollars",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-letter-dollars",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-table-clean",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-table-clean",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-table-late",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-table-late",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-edit-ho-table-expired",
+      "category": "edited bill on holdout layout: incremental",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": true,
+      "findings": [
+        {
+          "kind": "revision_edit",
+          "severity": "high",
+          "title": "Amounts changed after the document was created"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-ho-patch-ho-table-expired",
+      "category": "edited bill on holdout layout: white-box patch",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "overlay_patch",
+          "severity": "high",
+          "title": "Text hidden under an opaque box"
+        }
+      ],
+      "screens": null,
+      "documents": 1
+    },
+    {
+      "case_id": "atk-cover-quotes-demo",
+      "category": "fabricated competition: author + file + phone",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "not_independent",
+          "severity": "high",
+          "title": "Competing quotes are not independent"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.0365,
+        "rd": 2.246,
+        "cover_bid_pattern": true,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-cover-shared-author",
+      "category": "fabricated competition: shared author",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "not_independent",
+          "severity": "high",
+          "title": "Competing quotes are not independent"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.0342,
+        "rd": 2.451,
+        "cover_bid_pattern": true,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-cover-shared-file",
+      "category": "fabricated competition: copied from the same file",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "not_independent",
+          "severity": "high",
+          "title": "Competing quotes are not independent"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.0342,
+        "rd": 2.451,
+        "cover_bid_pattern": true,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-cover-shared-phone",
+      "category": "fabricated competition: shared phone number",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "not_independent",
+          "severity": "high",
+          "title": "Competing quotes are not independent"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.0342,
+        "rd": 2.451,
+        "cover_bid_pattern": true,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-cover-shared-email",
+      "category": "fabricated competition: shared email address",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "not_independent",
+          "severity": "high",
+          "title": "Competing quotes are not independent"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.0342,
+        "rd": 2.451,
+        "cover_bid_pattern": true,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-insider-authored",
+      "category": "fabricated competitor written by the requester",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "block",
+      "target_status": "fail",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "author_is_member",
+          "severity": "high",
+          "title": "Written by someone in your workspace"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.1232,
+        "rd": 5.051,
+        "cover_bid_pattern": false,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-cover-created-together",
+      "category": "fabricated competition: same tool, minutes apart only",
+      "kind": "attack",
+      "expected": "review",
+      "decision": "review",
+      "target_status": "unknown",
+      "recovered_original": null,
+      "findings": [
+        {
+          "kind": "not_independent",
+          "severity": "medium",
+          "title": "Competing quotes are not independent"
+        }
+      ],
+      "screens": {
+        "n": 3,
+        "cv": 0.0342,
+        "rd": 2.451,
+        "cover_bid_pattern": true,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    },
+    {
+      "case_id": "atk-cover-clean-metadata",
+      "category": "fabricated competition: fresh, unrelated metadata (hard)",
+      "kind": "attack",
+      "expected": "block",
+      "decision": "clear",
+      "target_status": "pass",
+      "recovered_original": null,
+      "findings": [],
+      "screens": {
+        "n": 3,
+        "cv": 0.0342,
+        "rd": 2.451,
+        "cover_bid_pattern": true,
+        "note": "Context only: with few quotes these screens are weak signals. A low CV with RD > 1 means the losing quotes sit tightly together above an isolated winner \u2014 the cover-bidding shape."
+      },
+      "documents": 3
+    }
+  ]
+}

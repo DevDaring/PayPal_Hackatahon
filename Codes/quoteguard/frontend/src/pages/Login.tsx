@@ -15,7 +15,7 @@ const QUOTES = [
 ];
 const STEPS = [
   { icon: FileSearch, label: "Evidence cited", sub: "every value → its PDF line" },
-  { icon: ShieldCheck, label: "Policy checked", sub: "pass · fail · unknown" },
+  { icon: ShieldCheck, label: "Policy + forensics", sub: "no edited bills, no staged rivals" },
   { icon: BadgeCheck, label: "Approval signed", sub: "SHA-256 of the exact purchase" },
   { icon: Wallet, label: "PayPal captured", sub: "$570.00 · Sandbox" },
 ];
@@ -94,7 +94,7 @@ function ProductPreview() {
 }
 
 const PROOF = [
-  { value: "24/26", label: "decisions right on an unseen holdout — rules parser: 11/26" },
+  { value: "40/44", label: "document-fraud attacks caught, 0 false alarms on 38 honest cases" },
   { value: "3", label: "human consents the agent can never give itself" },
   { value: "$0", label: "real money — PayPal Sandbox, synthetic quotes" },
 ];
@@ -149,7 +149,7 @@ export function LoginPage() {
               From supplier PDF to an <em className="bg-gradient-to-r from-teal-bright to-[#5eead4] bg-clip-text pr-1 text-transparent">approved</em> PayPal purchase.
             </h1>
             <p className="mt-3 max-w-[540px] text-[16px] leading-relaxed text-white/70">
-              An AI agent that reads supplier quotes, cites the line behind every number, and only pays what a person approved — checked again before money moves.
+              An AI agent that reads supplier quotes, cites the line behind every number, catches edited bills and staged competition, and only pays what a person approved.
             </p>
           </div>
           <ProductPreview />

@@ -247,6 +247,7 @@ def process(db_factory, document_id: str, force_rules: bool = False) -> None:
             page_rows[row.page_number] = row
         doc.text_sha256 = sha256_text(full_text)
         doc.suspicious = suspicious or None
+        doc.forensics = parsed.get("forensics")
         if not cached_result and meta["method"] in ("llm", "rules"):
             db.add(ExtractionCache(workspace_id=ws_id, cache_key=ck, result={"extraction": ex.model_dump(mode="json"), "meta": {k: v for k, v in meta.items() if k != "latency_ms"}}, created_at=timeutil.now()))
         db.flush()

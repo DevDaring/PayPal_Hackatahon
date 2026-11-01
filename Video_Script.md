@@ -16,7 +16,7 @@ This file is the single source of truth for the video. It is written for automat
    - "Controlled test" in Demo Lab.
    - **"Sped up 2×"** (or the actual factor) on any accelerated clip.
 3. **No invented numbers.** Use only the numbers in §5 (measured) and the capture ID that appears in *your* recording. Never type a capture ID by hand.
-4. **No third-party trademarks or copyrighted material** in your own animations: no PayPal, Gemini, Google or AG Grid logos in generated graphics, and no stock music with unclear rights. PayPal's buttons and window may appear only as they genuinely appear in the product recording.
+4. **No third-party trademarks or copyrighted material** in your own animations: no PayPal, Anthropic, NanoGPT, Google or AG Grid logos in generated graphics, and no stock music with unclear rights. PayPal's buttons and window may appear only as they genuinely appear in the product recording.
 5. **Generated video must not contain text.** Generative models garble letters. All text, numbers and labels are overlays (§7), rendered as crisp vector or HTML text.
 6. **Voice-over stays inside the scene's time window.** If TTS runs long, shorten the pause or speed up the footage (and label it), never the meaning.
 7. **Final length 2:45–2:55.** Judges are not required to watch past 3:00.
@@ -65,12 +65,14 @@ Outputs in `Video/capture/`:
 | `stills/*.png` | 1080p stills per scene (thumbnails, fallbacks, Devpost gallery) |
 | `walkthrough-timeline.json` | `scenes[]` with `scene` id and `t_ms` = ms from start of the **main** video |
 
-Scene ids written by the recorder: `01_login`, `02_overview`, `03_agent_start`, `04_agent_confirm`, `05_agent_working`, `06_agent_decided`, `07_compare`, `08_evidence`, `09_impact`, `10_whatif`, `11_approve`, `12_checkout`, `13_paypal_popup`, `14_receipt`, `15_replay`, `16_demolab`, `17_evaluation`, `18_end`.
+Scene ids written by the recorder: `01_login`, `02_overview`, `03_agent_start`, `04_agent_confirm`, `05_agent_working`, `06_agent_decided`, `07_compare`, `08_evidence`, `09_impact`, `10_whatif`, `11_approve`, `12_checkout`, `13_paypal_popup`, `14_receipt`, `15_replay`, `16_demolab_integrity`, `17_radar_edited_bill`, `18_radar_cover_quotes`, `19_evaluation`, `20_end`.
+
+The two Demo Lab attacks (`16_demolab_integrity`) start together; the recorder shows the edited bill first, then returns for the cover quotes, so the second wait is usually already over.
 
 **Clip extraction rule:** a clip for scene X runs from `t_ms[X]` to `t_ms[next scene]` in the main video. Trim dead time freely.
 
 **Speed-ups:**
-- The agent's extraction wait (`05_agent_working` → `06_agent_decided`) and the Demo Lab wait (inside `16_demolab`) may be accelerated.
+- The agent's extraction wait (`05_agent_working` → `06_agent_decided`) and the Demo Lab wait (inside `16_demolab_integrity`) may be accelerated.
 - Label them with the overlay "Sped up N×".
 - Use `setpts=PTS/N` to accelerate.
 
@@ -90,19 +92,19 @@ Style: calm, confident, product-first. Brand palette:
 
 | # | Time | Visual (source) | On-screen overlays (§7) | Music |
 |---|---|---|---|---|
-| S01 | 0:00–0:09 | **GFX-1 Cold open**: three paper quote cards fall onto a desk; "$470", "$570", "$640" tags flip in | "30 headsets · $600 budget · 3 supplier quotes" | Soft intro, pads only |
-| S02 | 0:09–0:20 | **GFX-2 The problem**: $470 card gets an amber "USB-A ≠ USB-C" stamp; $640 card unfolds a "+$160 shipping" strip; a chat bubble "looks good 👍" turns into a payment that doesn't match | "Cheapest ≠ compliant" · "Hidden costs" · "Approval ≠ payment" | Plucks enter |
-| S03 | 0:20–0:28 | **GFX-3 Title**: QuoteGuard shield; tagline types in | "QuoteGuard" / "Evidence for every decision. Payments that match what you approved." | Beat enters |
-| S04 | 0:28–0:50 | Product: `03_agent_start` → `04_agent_confirm` → `05_agent_working` (sped up) → `06_agent_decided` | Top-left: "Synthetic supplier documents" · "Consent 1 of 3: you confirm" · "Sped up 2×" during extraction | Steady |
-| S05 | 0:50–1:10 | Product: `07_compare` → `08_evidence` (zoom 140% on the highlighted PDF line, 1.5 s hold) → brief `09_impact` | Callouts: "Harbor $470 — wrong connector" · "Northstar +$160 shipping" · "ClearWave $570 meets every requirement" · on zoom: "Every number links to its line on the PDF" | Steady |
-| S06 | 1:10–1:20 | Product: `10_whatif` ($650, then $560) | "Preview only — never used for payment" | Steady |
-| S07 | 1:20–1:33 | Product: `11_approve` → approved state | "Consent 2 of 3: approver signs the exact purchase" · callout on the hash/expiry: "Supplier · amount · PayPal merchant · expiry → one hash" | Slight lift |
-| S08 | 1:33–2:00 | Product: `12_checkout` → **PayPal popup video** (cut in, 6–8 s, picture-in-picture or full) → `14_receipt` (hold 3 s on IDs) | "PayPal Sandbox — no real money" (persistent) · "Consent 3 of 3: buyer approves in PayPal" · on receipt: "Captured & verified by PayPal Sandbox" · callout on webhooks | Build, peak at receipt |
-| S09 | 2:00–2:15 | Product: `16_demolab` (sped up wait) → hold on "Blocked as expected" and the red diff line | "Controlled test" · callout on diff: "amount changed after approval → blocked" | Tension → resolve |
-| S10 | 2:15–2:36 | Product: `17_evaluation`, plus **GFX-4 bar chart** overlay with the numbers in §5 | "26 unfamiliar quotes · labels frozen before testing" | Calm |
+| S01 | 0:00–0:08 | **GFX-1 Cold open**: three paper quote cards fall onto a desk; "$470", "$570", "$640" tags flip in | "30 headsets · $600 budget · 3 supplier quotes" | Soft intro, pads only |
+| S02 | 0:08–0:19 | **GFX-2 The problem**: amber "USB-A ≠ USB-C" stamp on $470; "+$160 shipping" strip on $640; then the $640 tag is scratched out and retyped "$540"; two ghost cards appear behind a third, joined by a thin red thread | "Cheapest ≠ compliant" · "Hidden costs" · "Edited bills" · "Staged competition" | Plucks enter |
+| S03 | 0:19–0:25 | **GFX-3 Title**: QuoteGuard shield; tagline types in | "QuoteGuard" / "Evidence for every decision. Payments that match what you approved." | Beat enters |
+| S04 | 0:25–0:42 | Product: `03_agent_start` → `04_agent_confirm` → `05_agent_working` (sped up) → `06_agent_decided` | "Synthetic supplier documents" · "Consent 1 of 3: you confirm" · "Sped up 2×" during extraction | Steady |
+| S05 | 0:42–0:58 | Product: `07_compare` → `08_evidence` (zoom 140% on the highlighted PDF line, 1.5 s hold) | "Harbor $470 — wrong connector" · "Northstar +$160 shipping" · "ClearWave $570 meets every requirement" · on zoom: "Every number links to its line on the PDF" | Steady |
+| S06 | 0:58–1:08 | Product: `11_approve` → approved state | "Consent 2 of 3: approver signs the exact purchase" · on hash: "Supplier · amount · PayPal merchant · expiry → one hash" | Slight lift |
+| S07 | 1:08–1:30 | Product: `12_checkout` → **PayPal popup video** (6–8 s, picture-in-picture) → `14_receipt` (hold 2.5 s on IDs) | "PayPal Sandbox — no real money" (persistent) · "Consent 3 of 3: buyer approves in PayPal" · "Captured & verified by PayPal Sandbox" | Build, peak at receipt |
+| S08 | 1:30–1:58 | Product: `16_demolab_integrity` (sped up wait, hold on the **Counterfactual** step) → `17_radar_edited_bill` (zoom 140% on the "Recovered original / Shown in the file now" table) | "Controlled test" · on counterfactual: "Without forensics: payable, rank 1" (red) · on table: "Recovered from the PDF's hidden revision" (teal) · "BLOCKED" stamp | Tension |
+| S09 | 1:58–2:20 | Product: `18_radar_cover_quotes`: provenance graph (zoom 130%), then bid screens, then the AI memo | On graph edges: "same author" · "same original file" · "same phone" · on screens: "Cover-bidding shape (Huber & Imhof, 2019)" · on memo: "AI explains · numbers verified · verdict computed without the model" | Tension → resolve |
+| S10 | 2:20–2:36 | Product: `19_evaluation` (integrity benchmark card) with **GFX-4** counters overlaid | "82 labelled cases · synthetic · deterministic" | Calm |
 | S11 | 2:36–2:50 | **GFX-5 End card** | "QuoteGuard" · "quoteguard.koushikdeb.com" · "github.com/DevDaring/PayPal_Hackatahon" · "PayPal Sandbox · synthetic documents · built for the PayPal AI Hackathon" | Resolve, fade out by 2:50 |
 
-`15_replay` (decision replay) is optional B-roll: use 2–3 s inside S08 or S10 if time allows.
+`10_whatif` and `15_replay` are optional B-roll (2–3 s) if a scene runs short. Do not add new claims for them.
 
 ---
 
@@ -117,43 +119,62 @@ Style: calm, confident, product-first. Brand palette:
 
 | Scene | Voice-over text (speak exactly) | Max length |
 |---|---|---|
-| S01 | "Your team needs thirty headsets. The budget is six hundred dollars, and three supplier quotes just arrived as PDFs." | 8.5 s |
-| S02 | "The cheapest one has the wrong connector. Another hides a hundred and sixty dollars of shipping. And the payment that finally goes out often isn't what anyone approved." | 10.5 s |
-| S03 | "QuoteGuard turns supplier quotes into an evidence-backed PayPal purchase." | 7.5 s |
-| S04 | "I describe the purchase in plain English. Gemini drafts the requirements — and the agent stops, because nothing counts until I confirm. Then it gathers the quotes, reads every term, and cites the exact line it came from." | 21 s |
-| S05 | "The decision is arithmetic, not a model's opinion. ClearWave, at five hundred seventy dollars, meets every requirement. Harbor looks cheapest but is U-S-B A. Click Northstar's shipping, and there's the line on their PDF." | 19.5 s |
-| S06 | "What-ifs are only previews. At six-fifty, Northstar qualifies but still isn't best. At five-sixty, nothing does — so nothing is recommended." | 9.5 s |
-| S07 | "An approver signs the exact purchase: supplier, amount, PayPal merchant and expiry, sealed in a single hash." | 12.5 s |
-| S08 | "Checkout is built on the server from that approved snapshot, so the browser can't change the amount or the payee. The buyer approves in PayPal's own window. We verify the order, capture it, and PayPal's signed webhook confirms it." | 26 s |
-| S09 | "Now let's try to break it. Change the amount after approval — even directly in the database — and execution is blocked until someone approves again." | 14.5 s |
-| S10 | "And we measure it. On twenty-six unfamiliar quotes, a rules parser made eleven correct decisions. Gemini with our checks made twenty-four, in three out of three runs. The test also caught one real mistake; we fixed it, and now test for it." | 20.5 s |
-| S11 | "QuoteGuard: evidence for every decision, and payments that match what you approved. Built for small teams that buy with PayPal." | 13 s |
+| S01 | "Your team needs thirty headsets. The budget is six hundred dollars, and three supplier quotes just arrived as PDFs." | 7.5 s |
+| S02 | "The cheapest has the wrong connector. Another hides a hundred and sixty dollars of shipping. And sometimes the document itself has been quietly edited — or the competition is staged." | 10.5 s |
+| S03 | "QuoteGuard turns supplier quotes into a verified PayPal purchase." | 5.5 s |
+| S04 | "I describe the purchase in plain English. The agent drafts the requirements and stops until I confirm. Then it reads every quote and cites the exact line behind every number." | 16.5 s |
+| S05 | "The decision is arithmetic, not a model's opinion. ClearWave, at five hundred seventy dollars, meets every requirement. Click Northstar's shipping, and there's the line on their PDF." | 15.5 s |
+| S06 | "An approver signs the exact purchase — supplier, amount, PayPal merchant and expiry — sealed in one hash." | 9.5 s |
+| S07 | "Checkout is built on the server from that approved snapshot. The buyer approves in PayPal's own window; we verify the order before capturing, and PayPal's signed webhook confirms it." | 21 s |
+| S08 | "Now, the fraud a finance team actually worries about. Someone opens Northstar's six-hundred-forty-dollar quote in a PDF editor and changes it to five-forty. The page looks untouched, the maths adds up, and without forensics it would win and be paid. But PDFs keep their history. QuoteGuard recovers the original revision — six-forty — and blocks it." | 27.5 s |
+| S09 | "Or the only quote under budget arrives with two competitors its own salesperson wrote. The provenance graph links all three: same author, same original file, same phone number. The prices even show the cover-bidding shape from bid-rigging research. An AI investigator explains it — using only verified facts." | 21.5 s |
+| S10 | "And we measure it: eighty-two labelled cases. Zero false alarms on thirty-eight honest ones, forty of forty-four attacks caught, and every hidden original recovered. The four misses are published too." | 15.5 s |
+| S11 | "QuoteGuard. Evidence for every decision, and payments that match what you approved." | 9 s |
 
-Total is about 330 words, roughly 2:30 of speech inside 2:50, leaving natural breathing room. Add 0.3–0.6 s of silence between sentences where the visual needs to land (the S05 PDF zoom and the S08 receipt).
+Total is about 340 words, roughly 2:30 of speech inside 2:50. Add 0.3–0.6 s of silence where the visual needs to land: the S05 PDF zoom, the S07 receipt, the S08 recovered-original table and the S09 graph.
+
+Extra pronunciation: "Huber and Imhof" = *HOO-ber and IM-hoff* (only in on-screen text; not spoken). "five-forty" / "six-forty" = *five forty* / *six forty* dollars.
 
 ---
 
 ## 5. Measured facts you may show (do not change)
 
-All figures were measured on 1 November 2026 and stored in the app (Evaluation page) and in `Codes/quoteguard/reports/`.
+All figures are stored in the app (Evaluation page) and in `Codes/quoteguard/reports/`.
 
-The table below compares the two extractors on the **holdout set**: 26 unfamiliar synthetic quotes (prose letters, tables, two-page terms, revised offers, negated specs), with labels frozen **before** testing. These are the **first, unseen runs**.
+### 5a. Document integrity benchmark (the headline numbers for S10)
 
-| Measure | Rules parser | Gemini 2.5 Flash + QuoteGuard checks (3 runs) |
+`quoteguard-integrity-v1`, 82 labelled purchase cases, scored by the deterministic analyzer `integrity-v1` (no model in the verdict). Measured 1 November 2026, locally and again on the live server with identical results.
+
+| Measure | Result |
+|---|---|
+| Honest cases flagged (false alarms) | **0 / 38** (60 honest documents, incl. all 26 holdout layouts and honest suppliers sharing invoicing software) |
+| Attacks caught | **40 / 44** (36 blocked, 4 sent to review) |
+| Original amounts recovered from hidden PDF revisions | **15 / 15** (12 of them on holdout layouts) |
+| Misses, published | 4 — a cleanly re-saved edit (×3) and an invented competitor with fresh, unrelated metadata (×1) |
+
+Say "synthetic" if you show the table; it is a regression benchmark built by the same team, not a field estimate.
+
+### 5b. The two Demo Lab attacks (S08, S09)
+
+- **Edited bill:** Northstar's real quote is $640.00 (shipping $160.00). Edited in a PDF editor to $540.00 (shipping $60.00). Without forensics the same policy rates it *payable, rank 1*; with forensics, **Document integrity: FAIL** and the approval attempt is refused. Original recovered: "Total: $640.00 → $540.00".
+- **Staged competition:** Pinecrest Audio $585.00 (only quote under the $600 budget), "competitors" Alder $612.00 and Birch $629.00. Links: Pinecrest↔Alder same author; Alder↔Birch same original document ID; Pinecrest↔Birch same phone number; all created minutes apart with the same tool. Bid screens: coefficient of variation **0.036**, relative distance **2.25** (the cover-bidding shape). Without forensics: *payable, rank 1*; with forensics: blocked.
+- The AI investigator memo is written by **Claude Sonnet 5.5 via NanoGPT**; its wording varies between runs, so read it from your recording — never retype it.
+
+### 5c. Extraction: rules vs. AI on unfamiliar layouts (optional, not in the VO)
+
+Holdout set: 26 unfamiliar synthetic quotes, labels frozen **before** testing.
+
+| Run | Rules parser | AI + QuoteGuard checks |
 |---|---|---|
-| Decisions matching labels | **11 / 26** | **24 / 26** in each of 3 runs |
-| Payable quotes wrongly blocked | 8 / 8 | 1 / 8 |
-| Non-payable quotes marked payable | 0 / 18 | 1 / 18 in each run — a real defect, fixed and regression-tested afterwards |
-| Cited lines found on the cited page | 147 / 147 | 380 / 380 in two runs (377 / 377 in the first) |
+| First, unseen runs (Gemini 2.5 Flash, 3 runs) | **11 / 26** | **24 / 26** in each run |
+| After fixing two defects the holdout exposed — "seen" (Gemini 2.5 Flash, 3 runs) | 12 / 26 | 26 / 26 in each run |
+| Current model — "seen" (Claude Sonnet 5.5 via NanoGPT, 1 run) | 12 / 26 (deterministic, unchanged) | **23 / 26**; 0 / 18 non-payable marked payable; 1 / 8 payable blocked; 368 / 368 citations found. All 3 misses fail safe (a missed subtotal ×2, “fail” instead of “unknown” ×1) |
 
-After fixing the two general defects this holdout exposed (clause splitting inside "3.5 mm"; plural words), reruns scored AI **26 / 26** in each of 3 runs, with 0 / 18 non-payable marked payable and 0 / 8 payable blocked; the rules parser scored 12 / 26. These reruns are labelled **"seen"**. If you show them, say "after the fix", never "unseen".
+Only the first row may be called "unseen". If you show any of this, name the model.
 
 Product facts:
-- A real sandbox purchase of **$570.00** captured with status COMPLETED.
-- Signed PayPal webhooks verified.
-- Over 60 automated backend tests.
-
-Bar chart for GFX-4 (two bars only): "Correct decisions on 26 unfamiliar quotes", Rules **11**, AI + checks **24**. Footnote: "Synthetic holdout · labels frozen before testing · 3 AI runs, same result".
+- A real sandbox purchase of **$570.00** captured with status COMPLETED; signed PayPal webhooks verified.
+- 72 automated backend tests.
 
 ---
 
@@ -184,19 +205,26 @@ Render all graphics as **HTML/CSS/SVG animated pages recorded with Playwright at
 - Optional AI b-roll behind the cards (no text, blurred 8 px): *"Top-down view of a tidy desk with a laptop and printed documents, soft morning light, shallow depth of field, calm office, no logos, no text"* (seedance / higgsfield / fal, 5 s, slow push-in).
 
 ### GFX-2 The problem (11 s)
-- **0–3 s:** the $470 card gets an amber stamp "USB-A ≠ USB-C".
-- **3–6 s:** the $640 card unfolds a strip "+$160 shipping" in red.
-- **6–11 s:** a chat bubble "looks good 👍" morphs into a payment slip whose amount flickers between $570 and $590, then a red outline appears.
-- Captions in Inter 40 px: "Cheapest ≠ compliant" · "Hidden costs" · "Approval ≠ payment".
+- **0–2.5 s:** the $470 card gets an amber stamp "USB-A ≠ USB-C".
+- **2.5–5 s:** the $640 card unfolds a strip "+$160 shipping" in red.
+- **5–8 s:** on the same $640 card, a white box slides over "$640" and "$540" is typed on top; a faint ghost of "$640" stays visible underneath (it is still in the file).
+- **8–11 s:** two pale "competitor" cards slide in behind a third; a thin red thread joins all three.
+- Captions in Inter 40 px: "Cheapest ≠ compliant" · "Hidden costs" · "Edited bills" · "Staged competition".
 
 ### GFX-3 Title (8 s)
 - A shield icon draws in (stroke animation): teal `#14B8A6` shield with a navy check.
 - "QuoteGuard" in Instrument Serif 120 px, navy, on off-white.
 - Tagline types in, Inter 34 px, navy at 80%: "Evidence for every decision. Payments that match what you approved."
 
-### GFX-4 Results bar chart (overlay in S10, 7 s)
-- Two horizontal bars that grow left to right (ease-out 1.2 s): Rules **11** (grey `#94A3B8`), AI + checks **24** (teal), on a 0–26 scale.
-- Labels and footnote exactly as in §5.
+### GFX-4 Integrity counters (overlay in S10, 8 s)
+- Three counters count up (ease-out 1.2 s, staggered 0.4 s), Instrument Serif 96 px on a navy band:
+  - **0 / 38** — "honest cases flagged"
+  - **40 / 44** — "attacks caught"
+  - **15 / 15** — "hidden originals recovered"
+- Footnote, Inter 24 px: "82 labelled synthetic cases · deterministic forensics · 4 misses published".
+
+### GFX-6 Hidden revision (optional insert in S08, 3 s, before the product zoom)
+- A PDF page peels back like a sheet of paper, revealing an identical page underneath where "$640.00" glows teal while the top sheet shows "$540.00" in red. Purely illustrative; label it "Illustration".
 
 ### GFX-5 End card (14 s)
 - Navy background, QuoteGuard wordmark, then three lines fade in:
@@ -207,8 +235,8 @@ Render all graphics as **HTML/CSS/SVG animated pages recorded with Playwright at
 ### Overlays on product footage
 - **Corner labels** (top-left pill): white text on navy at 85%, Inter 26 px, 16 px padding, 12 px radius. Text: "Synthetic supplier documents" / "PayPal Sandbox — no real money" / "Controlled test" / "Sped up 2×".
 - **Consent badges** (top-right): amber pill, navy text, e.g. "Consent 2 of 3: approver signs".
-- **Callouts:** a 3 px teal rounded rectangle around the UI element plus a label card with a short arrow. Animate in over 0.25 s and hold ≥ 1.5 s. Use **red** for the Demo Lab diff and the Harbor/Northstar issues, **teal** for ClearWave and evidence.
-- **Zoom:** in S05 (the highlighted PDF line) and S08 (receipt IDs), scale 1.0 → 1.4 over 0.6 s around the element, hold, then return.
+- **Callouts:** a 3 px teal rounded rectangle around the UI element plus a label card with a short arrow. Animate in over 0.25 s and hold ≥ 1.5 s. Use **red** for the Harbor/Northstar issues, the counterfactual and the provenance links; **teal** for ClearWave, evidence and the recovered original.
+- **Zoom:** in S05 (the highlighted PDF line), S07 (receipt IDs), S08 (the recovered-original table) and S09 (the provenance graph), scale 1.0 → 1.4 over 0.6 s around the element, hold, then return.
 - **Captions:** burned-in, Inter 34 px, white with 60% black box, bottom-centre, max 2 lines, max 42 characters per line. Also export a `.srt`.
 
 **Locating elements for callouts:** use the stills in `Video/capture/stills/` (same 1920×1080 frame) to place boxes, then track to the video at the scene's `t_ms`. The UI layout is static within each scene.
@@ -233,7 +261,8 @@ Render all graphics as **HTML/CSS/SVG animated pages recorded with Playwright at
 - [ ] Every product claim is shown in real footage from the same recording run (checkout → popup → receipt).
 - [ ] "PayPal Sandbox — no real money" is visible during checkout and receipt; "Synthetic supplier documents" and "Controlled test" labels are present; every speed-up is labelled.
 - [ ] The capture ID shown is the one from this recording, not typed.
-- [ ] The numbers on screen equal §5 exactly.
+- [ ] The numbers on screen equal §5 exactly; S08 shows $640.00 → $540.00 from the recording itself.
+- [ ] S08 and S09 say "Controlled test"; the AI memo text on screen is from the recording, not retyped.
 - [ ] No third-party logos in generated graphics; music is original.
 - [ ] Captions match the voice-over word for word; nothing is cut off at the frame edges.
 - [ ] Watched once at 100% on a laptop: all UI text is readable (zoom where it isn't).
@@ -245,14 +274,14 @@ Render all graphics as **HTML/CSS/SVG animated pages recorded with Playwright at
 
 - **Title:** QuoteGuard — from supplier PDF to an approved PayPal purchase (PayPal AI Hackathon)
 - **Visibility:** Public. Check playback while signed out.
-- **Thumbnail:** `stills/07_compare.png` with the overlay "Evidence for every decision" (Instrument Serif, navy on off-white band).
-- **Chapters:** 0:00 The problem · 0:28 Agent mode · 0:50 Evidence & decision · 1:20 Exact approval · 1:33 PayPal Sandbox checkout · 2:00 Controlled test · 2:15 Measured results · 2:36 QuoteGuard
+- **Thumbnail:** `stills/17_radar_edited_bill.png` with the overlay "It was $640." (Instrument Serif, navy on off-white band); fallback `stills/07_compare.png` with "Evidence for every decision".
+- **Chapters:** 0:00 The problem · 0:25 Agent mode · 0:42 Evidence & decision · 0:58 Exact approval · 1:08 PayPal Sandbox checkout · 1:30 Catching an edited bill · 1:58 Exposing staged competition · 2:20 Measured results · 2:36 QuoteGuard
 - **Description:**
 
-> QuoteGuard turns supplier quotes into an evidence-backed PayPal purchase. Every extracted term links to the line on the supplier's PDF; the decision is deterministic; an approver signs a hash of the exact purchase; checkout is built only from that approved snapshot and verified with PayPal before capture.
+> QuoteGuard turns supplier quotes into an evidence-backed PayPal purchase. Every extracted term links to the line on the supplier's PDF; the decision is deterministic; Integrity Radar recovers hidden PDF revisions and links "competing" quotes that share an author, file or phone number (with bid-rigging screens from Huber & Imhof, 2019); an approver signs a hash of the exact purchase; checkout is built only from that approved snapshot and verified with PayPal before capture.
 >
 > Live demo: https://quoteguard.koushikdeb.com (one-click jury sign-in) · Code: https://github.com/DevDaring/PayPal_Hackatahon
 >
 > Shown: a real PayPal **Sandbox** purchase (no real money) with synthetic supplier documents. Demo Lab scenes are controlled tests. Some waits are sped up and labelled.
 >
-> Built with PayPal Orders v2 / Payments v2 / JS SDK / webhooks / Agent Toolkit, Gemini 2.5 Flash, FastAPI, PostgreSQL, LangGraph, React, AG Grid.
+> Built with PayPal Orders v2 / Payments v2 / JS SDK / webhooks / Agent Toolkit, Claude Sonnet 5.5 via NanoGPT, pdfplumber + pypdf forensics, FastAPI, PostgreSQL, LangGraph, React, AG Grid.

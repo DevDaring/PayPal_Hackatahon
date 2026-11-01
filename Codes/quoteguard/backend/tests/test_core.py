@@ -11,12 +11,12 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import func, select, update
 
-from quoteguard import timeutil
+from quoteguard import fixtures, timeutil
 from quoteguard.db import session_scope
 from quoteguard.domain import policy, whatif
 from quoteguard.domain.requirements import RequirementSpec, criterion_for
 from quoteguard.errors import AppError
-from quoteguard.models import Approval, Document, DocumentPage, EvidenceLink, MerchantBinding, PaymentOperation, Quote, QuoteVersion, WebhookEvent
+from quoteguard.models import Approval, Document, DocumentPage, EvidenceLink, MerchantBinding, PaymentOperation, PurchaseRequest, Quote, QuoteVersion, WebhookEvent
 from quoteguard.services import approvals, comparison, demo, documents, export, payments, webhooks
 from quoteguard.services import requests as rs
 from quoteguard.services.workflow import run_analysis
@@ -463,7 +463,7 @@ def test_fake_provider_is_used():
 
 # Demo Lab ---------------------------------------------------------------------------
 @pytest.mark.parametrize("scenario,verdict", [("amount_changed", "blocked_as_expected"), ("merchant_changed", "blocked_as_expected"), ("malicious_pdf", "blocked_as_expected"),
-                                              ("double_click", "one_operation"), ("lost_response", "recovered")])
+                                              ("double_click", "one_operation"), ("lost_response", "recovered"), ("edited_bill", "blocked_as_expected"), ("cover_quotes", "blocked_as_expected")])
 def test_demo_lab_scenarios_use_real_services(world, scenario, verdict):
     from quoteguard.models import DemoScenarioRun
 
@@ -625,3 +625,130 @@ def test_attribute_regressions_from_holdout(key, value, source, expected):
     from quoteguard.domain.attributes import assess
 
     assert assess(criterion_for(key, "USB-C" if key == "connector" else "yes"), value, source)[0] == expected
+
+
+# Document integrity ------------------------------------------------------------------
+def _integrity_docs(items):
+    from quoteguard.documents.integrity import DocInput
+    from quoteguard.documents.parse_child import parse
+
+    out = []
+    for key, supplier, pdf, total in items:
+        p = parse(pdf, 20)
+        out.append(DocInput(key, supplier, "\n".join(x["text"] for x in p["pages"]), p["forensics"], Decimal(total) if total else None))
+    return out
+
+
+def _sample_items(issue):
+    return [(s["key"], s["supplier"], fixtures.quote_pdf(s["q"]), s["q"]["total"].split("$")[1]) for s in fixtures.main_scenario(issue)]
+
+
+def test_integrity_clean_sample_is_clear():
+    from quoteguard.documents.integrity import analyze
+
+    r = analyze(_integrity_docs(_sample_items(fixtures.EVAL_SCENARIO_DATE)), ["DevTest", "Avery Chen"])
+    assert r["overall"] == "clear" and not [f for f in r["findings"] if f["severity"] != "low"]
+    assert {v["status"] for v in r["per_quote"].values()} == {"pass"}
+
+
+def test_integrity_recovers_original_amounts_from_incremental_edit():
+    from quoteguard.documents.integrity import analyze
+
+    issue = fixtures.EVAL_SCENARIO_DATE
+    items = _sample_items(issue)
+    items[0] = ("northstar", "Northstar Office", fixtures.edited_bill(issue), "540.00")
+    r = analyze(_integrity_docs(items), [])
+    f = next(f for f in r["findings"] if f["kind"] == "revision_edit")
+    assert f["severity"] == "high" and "$640.00 → $540.00" in f["detail"] and "$160.00 → $60.00" in f["detail"]
+    assert r["per_quote"]["northstar"]["status"] == "fail" and r["per_quote"]["clearwave"]["status"] == "pass"
+
+
+@pytest.mark.parametrize("variant,kind,severity", [("patch", "overlay_patch", "high"), ("retype", "font_outlier", "medium"), ("author", "author_is_member", "high")])
+def test_integrity_single_document_detectors(variant, kind, severity):
+    from quoteguard.documents.integrity import analyze
+
+    q = fixtures.main_scenario(fixtures.EVAL_SCENARIO_DATE)[0]["q"]
+    if variant == "patch":
+        pdf = fixtures.tamper_pdf(fixtures.quote_pdf(q), [("$640.00", "$540.00")], mode="patch", incremental=False)
+    elif variant == "retype":
+        pdf = fixtures.quote_pdf({**q, "retype": {"total": "Times-Roman"}})
+    else:
+        pdf = fixtures.quote_pdf({**q, "meta": {"author": "Riya Sen", "creator": "Microsoft Word", "producer": "Microsoft Word"}})
+    r = analyze(_integrity_docs([("q", "Northstar Office", pdf, "640.00")]), ["Riya Sen · Requester", "Avery Chen"])
+    f = next(f for f in r["findings"] if f["kind"] == kind)
+    assert f["severity"] == severity
+    assert r["per_quote"]["q"]["status"] == ("fail" if severity == "high" else "unknown")
+
+
+def test_integrity_links_fabricated_competition_and_bid_screens():
+    from quoteguard.documents.integrity import analyze
+
+    items = [(d["supplier"], d["supplier"], d["pdf"], None) for d in fixtures.cover_quote_set(fixtures.EVAL_SCENARIO_DATE)]
+    docs = _integrity_docs(items)
+    for d, t in zip(docs, ("585.00", "612.00", "629.00")):
+        d.total = Decimal(t)
+    r = analyze(docs, [])
+    kinds = {s["kind"] for ln in r["links"] for s in ln["signals"]}
+    assert {"shared_author", "shared_document_id", "shared_phone", "created_together"} <= kinds
+    assert len(r["clusters"]) == 1 and len(r["clusters"][0]["quotes"]) == 3 and r["clusters"][0]["level"] == "high"
+    assert {v["status"] for v in r["per_quote"].values()} == {"fail"}
+    assert r["screens"]["cover_bid_pattern"] is True and r["screens"]["rd"] > 1 and r["screens"]["cv"] < 0.05
+
+
+def test_integrity_same_invoicing_software_is_not_collusion():
+    """False-positive control: two honest suppliers on the same tool and template, different people and days."""
+    from datetime import datetime
+
+    from quoteguard.documents.integrity import analyze
+
+    issue = fixtures.EVAL_SCENARIO_DATE
+    a = fixtures.headset_quote("Granite Supplies", "neutral", issue, unit="17.00", sub="510.00", ship="20.00", tax="0.00", total="530.00", days=5,
+                               meta={"author": "Maya Okafor", "creator": "QuickBooks Online", "producer": "QuickBooks PDF Service", "created": datetime(2026, 10, 27, 9, 5)})
+    b = fixtures.headset_quote("Riverbend Office", "neutral", issue, unit="17.50", sub="525.00", ship="20.00", tax="0.00", total="545.00", days=5,
+                               meta={"author": "Owen Brennan", "creator": "QuickBooks Online", "producer": "QuickBooks PDF Service", "created": datetime(2026, 10, 30, 14, 40)})
+    r = analyze(_integrity_docs([("a", "Granite Supplies", fixtures.quote_pdf(a), "530.00"), ("b", "Riverbend Office", fixtures.quote_pdf(b), "545.00")]), [])
+    assert r["overall"] == "clear" and not r["clusters"]
+    assert all(s["strength"] == "low" for ln in r["links"] for s in ln["signals"])  # template resemblance is context only
+
+
+def test_integrity_memo_discards_unsupported_numbers(world, monkeypatch):
+    from quoteguard.ai import provider
+    from quoteguard.services import integrity
+
+    result = {"findings": [{"id": "F1", "severity": "high", "title": "Amounts changed", "detail": "Total: $640.00 → $540.00", "quotes": ["q"], "kind": "revision_edit"}],
+              "documents": {"q": {"supplier": "Northstar Office"}}, "screens": None}
+    monkeypatch.setattr(provider, "chat_json", lambda *a, **k: ({"headline": "Total was cut by $250", "explanation": "x", "next_steps": [], "question_for_supplier": ""}, {"model": "m"}))
+    with session_scope() as db:
+        req = db.get(PurchaseRequest, uuid.UUID(str(world["request_id"])))
+        assert integrity.memo(db, req, result) is None  # $250 is not in the findings
+        monkeypatch.setattr(provider, "chat_json", lambda *a, **k: ({"headline": "Total changed from $640.00 to $540.00", "explanation": "Recovered from an earlier revision.",
+                                                                     "next_steps": ["Call the supplier"], "question_for_supplier": "Which total is correct?"}, {"model": "m"}))
+        assert integrity.memo(db, req, result)["headline"].startswith("Total changed")
+
+
+def test_integrity_memo_never_holds_locks_across_the_model_call(world, monkeypatch):
+    """Regression: the scenario held the request row lock while the model-call logger (another connection) inserted a row
+    referencing that request — a self-deadlock. The logger here behaves like production, with a lock timeout."""
+    from sqlalchemy import text
+
+    from quoteguard.ai import provider
+    from quoteguard.models import AICall, DemoScenarioRun
+
+    def fake_chat_json(system, user, *, purpose, workspace_id=None, request_id=None, **kw):
+        with session_scope() as s:
+            s.execute(text("SET LOCAL lock_timeout = '3s'"))
+            s.add(AICall(workspace_id=workspace_id, request_id=request_id, purpose=purpose, provider="test", model="test-model", status="ok", latency_ms=1))
+        return {"headline": "Northstar total changed from $640.00 to $540.00", "explanation": "The earlier revision shows $640.00.",
+                "next_steps": ["Ask Northstar to confirm the total"], "question_for_supplier": "Is the total $640.00 or $540.00?"}, {"model": "test-model", "provider": "test"}
+
+    monkeypatch.setattr(provider, "chat_json", fake_chat_json)
+    with session_scope() as db:
+        run = DemoScenarioRun(workspace_id=world["workspace_id"], scenario="edited_bill", status="running", steps=[], started_by=world["requester"].user_id, started_at=timeutil.now())
+        db.add(run)
+        db.flush()
+        run_id = run.id
+    demo._run_scenario(run_id, "edited_bill", world["requester"])
+    with session_scope() as db:
+        r = db.get(DemoScenarioRun, run_id)
+        assert (r.status, r.verdict) == ("finished", "blocked_as_expected"), r.steps[-2:]
+        assert any(st["title"].startswith("AI investigator memo") for st in r.steps)

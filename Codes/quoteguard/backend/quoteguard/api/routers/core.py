@@ -205,6 +205,15 @@ def get_comparison(request_id: str, ctx: Ctx = Depends(require_ctx), db: Session
     return comparison.comparison(db, ctx.actor, get_request(db, ctx.actor, request_id))
 
 
+@router.get("/requests/{request_id}/integrity", tags=["quotes"])
+def get_integrity(request_id: str, memo: bool = True, ctx: Ctx = Depends(require_ctx), db: Session = Depends(get_db)):
+    """Document forensics and supplier-independence analysis, with an optional AI investigator memo."""
+    rate_limit(db, f"integrity:{ctx.actor.workspace_id}", 240, 3600)
+    from ...services import integrity
+
+    return integrity.report(db, get_request(db, ctx.actor, request_id), with_memo=memo)
+
+
 class WhatIfIn(Strict):
     budget: str | None = None
     deadline_days: int | None = Field(default=None, ge=0, le=365)
@@ -651,8 +660,17 @@ class EvalIn(Strict):
 
 @router.get("/evaluation/runs", tags=["evaluation"])
 def eval_runs(ctx: Ctx = Depends(require_ctx), db: Session = Depends(get_db)):
-    rows = db.execute(select(EvaluationRun).order_by(EvaluationRun.started_at.desc()).limit(20)).scalars().all()
+    rows = db.execute(select(EvaluationRun).where(EvaluationRun.extraction_mode != "forensics").order_by(EvaluationRun.started_at.desc()).limit(20)).scalars().all()
     return {"items": [evaluation.run_json(r) for r in rows]}
+
+
+@router.get("/evaluation/integrity", tags=["evaluation"])
+def eval_integrity(ctx: Ctx = Depends(require_ctx), db: Session = Depends(get_db)):
+    """Latest stored run of the document-integrity benchmark (deterministic; see integrity_bench.py)."""
+    r = db.execute(select(EvaluationRun).where(EvaluationRun.extraction_mode == "forensics").order_by(EvaluationRun.started_at.desc()).limit(1)).scalar_one_or_none()
+    if r is None:
+        return {"run": None}
+    return {"run": {"id": str(r.id), "finished_at": r.finished_at, "code_revision": r.code_revision, "analyzer": r.model, "dataset": r.dataset_version, **(r.summary or {})}}
 
 
 @router.get("/evaluation/runs/{run_id}", tags=["evaluation"])

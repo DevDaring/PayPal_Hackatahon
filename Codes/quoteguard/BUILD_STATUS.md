@@ -9,7 +9,7 @@ Legend: ✅ implemented and verified · 🟡 implemented, verification needs a c
 | Password login (scrypt), server sessions, CSRF, CORS allowlist, rate limits | ✅ | tests 17, e2e |
 | Workspaces, requester/approver/admin roles, self-approval disabled, labelled demo role switch | ✅ | tests 6, 17 |
 | Isolated demo workspace per jury sign-in | ✅ | test 17, live site |
-| Structured request drafting (Gemini + rules fallback), human confirmation, immutable versions, tz-aware deadline | ✅ | e2e, smoke |
+| Structured request drafting (LLM via NanoGPT + rules fallback), human confirmation, immutable versions, tz-aware deadline | ✅ | e2e, smoke |
 | PDF upload validation, sandboxed parsing, hashes, page text + word boxes | ✅ | tests 3, 14 |
 | Evidence links (doc ID, SHA-256, quote version, page, source text, method, bbox / text-only) | ✅ | test 3, e2e drawer |
 | Human correction with note → new quote version, original preserved, approvals invalidated | ✅ | test 4 |
@@ -22,7 +22,8 @@ Legend: ✅ implemented and verified · 🟡 implemented, verification needs a c
 | Signed webhook handling (store → verify → dedupe → lookup) | ✅ | test 13; live `CHECKOUT.ORDER.APPROVED` and `PAYMENT.CAPTURE.COMPLETED` deliveries signature-verified and applied |
 | Comparison, approval, checkout and receipt screens | ✅ | e2e screenshots |
 | Three reproducible sample quotations + extra fixtures | ✅ | `fixtures/` |
-| Tests for payment and authorization boundaries | ✅ | 61 backend tests |
+| Tests for payment and authorization boundaries | ✅ | 72 backend tests |
+| Document integrity: hidden-revision recovery, white-box patches, retyped amounts, provenance graph across suppliers, bid screens; `integrity` policy check | ✅ | 8 integrity tests, Demo Lab `edited_bill` + `cover_quotes`, benchmark 82 cases (`run-integrity-bench`) |
 | Negated / conditional / conflicting specifications cannot pass (value **and** cited sentence assessed) | ✅ | policy + end-to-end document → approval tests |
 | Recovery enforces the same authority & provider-order checks as capture; existing captures still reconciled after expiry | ✅ | 8 recovery tests |
 

@@ -5,6 +5,7 @@
   run-eval [llm|rules] run the labelled evaluation set and store measured results
   export-fixtures DIR  write sample PDFs + the separate evaluation manifest
   register-webhook URL create the PayPal sandbox webhook subscription and print its ID
+  run-integrity-bench  score the document-integrity analyzer on the labelled forensic benchmark and store it
 """
 
 from __future__ import annotations
@@ -103,6 +104,21 @@ def export_fixtures(out: str) -> None:
     print(f"wrote fixtures to {d}")
 
 
+def run_integrity_bench(out_dir: str | None = None) -> None:
+    from . import integrity_bench
+    from .documents.integrity import INTEGRITY_VERSION
+    from .models import EvaluationRun
+
+    result = integrity_bench.run()
+    with session_scope() as db:
+        db.add(EvaluationRun(status="finished", dataset_version=integrity_bench.BENCH_VERSION, provider="deterministic", model=INTEGRITY_VERSION, extraction_mode="forensics",
+                             code_revision=evaluation._code_revision(), config={"members": integrity_bench.MEMBERS}, summary=result, started_at=timeutil.now(), finished_at=timeutil.now()))
+    if out_dir:
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        (Path(out_dir) / f"integrity-{timeutil.now():%Y%m%d-%H%M%S}.json").write_text(json.dumps(result, indent=2, default=str))
+    print(json.dumps({k: v for k, v in result["summary"].items() if k != "by_category"}, indent=2))
+
+
 def register_webhook(url: str) -> None:
     from .paypal.sandbox import PayPalSandbox
 
@@ -118,4 +134,5 @@ def register_webhook(url: str) -> None:
 if __name__ == "__main__":
     cmd, *args = sys.argv[1:] or ["help"]
     {"seed": lambda: seed(), "archive-demo": lambda: archive_demo(int(args[0]) if args else 48), "run-eval": lambda: run_eval(args[0] if args else "llm", args[1] if len(args) > 1 else "quoteguard-eval-v1"),
-     "export-fixtures": lambda: export_fixtures(args[0] if args else "../fixtures"), "register-webhook": lambda: register_webhook(args[0])}.get(cmd, lambda: print(__doc__))()
+     "export-fixtures": lambda: export_fixtures(args[0] if args else "../fixtures"), "register-webhook": lambda: register_webhook(args[0]),
+     "run-integrity-bench": lambda: run_integrity_bench(args[0] if args else None)}.get(cmd, lambda: print(__doc__))()
