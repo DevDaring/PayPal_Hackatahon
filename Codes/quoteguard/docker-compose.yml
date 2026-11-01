@@ -1,0 +1,33 @@
+# Local stack: PostgreSQL, API, worker and web (same origin on http://localhost:8080).
+services:
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: quoteguard, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-quoteguard}", POSTGRES_DB: quoteguard }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "quoteguard"], interval: 5s, retries: 20 }
+  api:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://quoteguard:${POSTGRES_PASSWORD:-quoteguard}@db:5432/quoteguard
+      QUOTEGUARD_ENV_FILE: /dev/null
+      APP_BASE_URL: http://localhost:8080
+      CORS_ALLOWED_ORIGINS: http://localhost:8080
+    volumes: [storage:/data/storage]
+    depends_on: { db: { condition: service_healthy } }
+  worker:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://quoteguard:${POSTGRES_PASSWORD:-quoteguard}@db:5432/quoteguard
+      QUOTEGUARD_ENV_FILE: /dev/null
+    command: ["python", "-m", "quoteguard.worker"]
+    volumes: [storage:/data/storage]
+    depends_on: [api]
+  web:
+    build: ./frontend
+    ports: ["8080:80"]
+    depends_on: [api]
+volumes:
+  pgdata: {}
+  storage: {}

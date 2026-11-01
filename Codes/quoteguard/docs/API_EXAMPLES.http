@@ -1,0 +1,90 @@
+# QuoteGuard API examples (VS Code REST Client / JetBrains HTTP client). No credentials included.
+# Full OpenAPI: {{base}}/api/docs
+@base = http://localhost:8251
+@csrf = paste-qg_csrf-cookie-value-here
+
+### Health and safe readiness (no secrets)
+GET {{base}}/api/v1/ready
+
+### Sign in (sets HttpOnly qg_session + readable qg_csrf cookies)
+POST {{base}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username": "<demo username>", "password": "<demo password>"}
+
+### Create a request (mutations need X-CSRF-Token)
+POST {{base}}/api/v1/requests
+Content-Type: application/json
+X-CSRF-Token: {{csrf}}
+
+{"text": "Buy 30 USB-C headsets with microphones. Total budget $600 including shipping and stated taxes. Delivery within seven calendar days."}
+
+### Confirm requirements (immutable version)
+POST {{base}}/api/v1/requests/<request_id>/confirm
+Content-Type: application/json
+X-CSRF-Token: {{csrf}}
+
+{"requirements": {"item": "USB-C headsets", "quantity": 30, "budget_amount": "600.00", "currency": "USD", "deadline_days": 7, "mandatory": [{"key": "connector", "label": "USB-C connector", "expected": "USB-C", "synonyms": ["usb-c"]}]}, "expected_version": 0}
+
+### Upload a quote PDF
+POST {{base}}/api/v1/requests/<request_id>/documents
+X-CSRF-Token: {{csrf}}
+Content-Type: multipart/form-data; boundary=b
+
+--b
+Content-Disposition: form-data; name="file"; filename="quote.pdf"
+Content-Type: application/pdf
+
+< ../fixtures/samples/ClearWave_Supplies_quote_DEMO.pdf
+--b--
+
+### Comparison (deterministic outcomes + evidence links)
+GET {{base}}/api/v1/requests/<request_id>/comparison
+
+### What-if preview (read-only)
+POST {{base}}/api/v1/requests/<request_id>/whatif
+Content-Type: application/json
+X-CSRF-Token: {{csrf}}
+
+{"budget": "650.00"}
+
+### Review exact terms, then approve with the terms hash you reviewed (approver role)
+GET {{base}}/api/v1/requests/<request_id>/approval-review?quote_id=<quote_id>
+
+###
+POST {{base}}/api/v1/requests/<request_id>/approvals
+Content-Type: application/json
+X-CSRF-Token: {{csrf}}
+
+{"quote_id": "<quote_id>", "terms_hash": "<64-hex from review>"}
+
+### Start checkout — body accepts NO amount or payee (unknown fields → 422)
+POST {{base}}/api/v1/approvals/<approval_id>/checkout
+Content-Type: application/json
+X-CSRF-Token: {{csrf}}
+
+{}
+
+### Capture after buyer approval in PayPal (idempotent; duplicates return the same operation)
+POST {{base}}/api/v1/payments/<operation_id>/capture
+Content-Type: application/json
+X-CSRF-Token: {{csrf}}
+
+{}
+
+### Reconcile with PayPal (authoritative lookup)
+POST {{base}}/api/v1/payments/<operation_id>/reconcile
+X-CSRF-Token: {{csrf}}
+
+### Evidence package
+GET {{base}}/api/v1/requests/<request_id>/export.json
+
+### Demo Lab scenario (demo workspace admin)
+POST {{base}}/api/v1/demo/scenarios/lost_response
+X-CSRF-Token: {{csrf}}
+
+### PayPal webhook endpoint (called by PayPal; verified server-side, no login)
+POST {{base}}/api/v1/webhooks/paypal
+Content-Type: application/json
+
+{"id": "WH-EXAMPLE", "event_type": "PAYMENT.CAPTURE.COMPLETED", "resource": {"id": "CAPTURE_ID"}}

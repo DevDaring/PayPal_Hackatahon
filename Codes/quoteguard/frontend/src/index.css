@@ -1,0 +1,51 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource/instrument-serif/400.css";
+@import "@fontsource/instrument-serif/400-italic.css";
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --color-canvas: #fbf8f3;
+  --color-surface: #ffffff;
+  --color-sunken: #f5f1ea;
+  --color-line: #e8e1d5;
+  --color-line-strong: #d8cfbf;
+  --color-ink: #0f2541;
+  --color-ink-2: #34445e;
+  --color-muted: #66708a;
+  --color-teal: #0f766e;
+  --color-teal-strong: #0b5c55;
+  --color-teal-soft: #e2f2ee;
+  --color-teal-bright: #14b8a6;
+  --color-amber: #a8550a;
+  --color-amber-soft: #fdf1d8;
+  --color-amber-line: #f2cf8a;
+  --color-danger: #b42318;
+  --color-danger-soft: #fde8e6;
+  --color-danger-line: #f4b4ad;
+  --color-navy-900: #0a1a30;
+  --shadow-card: 0 1px 2px rgb(15 37 65 / 0.04), 0 4px 16px -6px rgb(15 37 65 / 0.08);
+  --shadow-pop: 0 12px 40px -12px rgb(15 37 65 / 0.28);
+}
+
+html { background: var(--color-canvas); color: var(--color-ink); -webkit-font-smoothing: antialiased; }
+body { font-family: var(--font-sans); font-feature-settings: "cv11", "ss01", "tnum" 0; }
+.tnum { font-variant-numeric: tabular-nums; }
+.font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
+:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; border-radius: 6px; }
+::selection { background: #bfe7df; }
+
+@keyframes qg-fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes qg-pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(20 184 166 / .45); } 100% { box-shadow: 0 0 0 10px rgb(20 184 166 / 0); } }
+@keyframes qg-shimmer { from { background-position: -400px 0; } to { background-position: 400px 0; } }
+@keyframes qg-slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.animate-in { animation: qg-fade-up .35s ease-out both; }
+.pulse-ring { animation: qg-pulse-ring 1.6s ease-out infinite; }
+.slide-in { animation: qg-slide-in .25s ease-out both; }
+.skeleton { background: linear-gradient(90deg, #efe9df 0, #f8f4ee 120px, #efe9df 240px); background-size: 800px 100%; animation: qg-shimmer 1.4s linear infinite; border-radius: 8px; }
+.evidence-mark { background: rgb(245 158 11 / .28); border: 2px solid rgb(217 119 6 / .9); border-radius: 3px; box-shadow: 0 0 0 4px rgb(245 158 11 / .15); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
