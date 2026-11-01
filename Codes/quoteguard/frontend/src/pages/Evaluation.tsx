@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { AgGridReact } from "ag-grid-react";
+import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef } from "ag-grid-community";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { BarChart3, Play } from "lucide-react";
+import { BarChart3, Download, Play, Search } from "lucide-react";
 import { api, errorText } from "../lib/api";
 import { dateTime, FIELD_LABEL } from "../lib/format";
 import { useRoles } from "../lib/session";
@@ -72,31 +74,47 @@ export default function Evaluation() {
               <div className="flex flex-wrap gap-2">{Object.entries(s.by_category).map(([k, v]: any) => <Badge key={k} tone={v.agree === v.total ? "good" : "warn"}>{k}: {v.agree}/{v.total}</Badge>)}</div>
             </Card>
           </div>
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead className="bg-sunken text-left text-[11.5px] uppercase tracking-wider text-muted"><tr><th className="px-4 py-2">Case</th><th className="px-4 py-2">Category</th><th className="px-4 py-2">Expected</th><th className="px-4 py-2">Actual</th><th className="px-4 py-2">Fields</th><th className="px-4 py-2">Evidence</th><th className="px-4 py-2">Payment</th><th className="px-4 py-2">ms</th></tr></thead>
-                <tbody className="divide-y divide-line">
-                  {d.cases.map((c: any) => {
-                    const fr = Object.values(c.field_results) as any[];
-                    return (
-                      <tr key={c.case_id} className={c.decision_expected !== c.decision_actual ? "bg-amber-soft/40" : ""}>
-                        <td className="px-4 py-2 font-mono text-[12px]">{c.case_id}</td><td className="px-4 py-2">{c.category}</td>
-                        <td className="px-4 py-2">{c.decision_expected}</td><td className="px-4 py-2 font-semibold">{c.decision_actual}</td>
-                        <td className="px-4 py-2 tnum">{fr.length ? `${fr.filter((x) => x.correct).length}/${fr.length}` : "—"}</td>
-                        <td className="px-4 py-2 tnum">{c.evidence_checked ? `${c.evidence_correct}/${c.evidence_checked}` : "—"}</td>
-                        <td className="px-4 py-2">{c.payment_blocked ? <Badge>blocked</Badge> : <Badge tone="good">eligible</Badge>}</td>
-                        <td className="px-4 py-2 tnum text-muted">{c.latency_ms}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          <CaseGrid cases={d.cases} runId={d.id} />
           <Callout tone="info" title="Honest limitations">Synthetic documents from one template family; the deterministic baseline was written alongside these templates, so its scores overstate real-world accuracy. Model confidence is not reported (no calibrated percentages). Checkout is assumed configured in evaluation so extraction and policy are measured in isolation.</Callout>
         </div>
       )}
+    </div>
+  );
+}
+
+ModuleRegistry.registerModules([AllCommunityModule]);
+const theme = themeQuartz.withParams({ fontFamily: "Inter Variable, ui-sans-serif", fontSize: 13, headerBackgroundColor: "#f5f1ea", headerTextColor: "#66708a", borderColor: "#e8e1d5", accentColor: "#0f766e", wrapperBorderRadius: 16, rowHoverColor: "#faf7f1" });
+
+function CaseGrid({ cases, runId }: { cases: any[]; runId: string }) {
+  const ref = useRef<AgGridReact>(null);
+  const [q, setQ] = useState("");
+  const rows = useMemo(() => cases.map((c) => {
+    const fr = Object.values(c.field_results) as any[];
+    return { ...c, fields_ok: fr.filter((x) => x.correct).length, fields_total: fr.length, agree: c.decision_expected === c.decision_actual, wrong_fields: fr.filter((x) => !x.correct).length };
+  }), [cases]);
+  const cols: ColDef[] = useMemo(() => [
+    { field: "case_id", headerName: "Case", minWidth: 200, cellClass: "font-mono text-[12px]", filter: "agTextColumnFilter", pinned: "left" },
+    { field: "category", headerName: "Category", filter: "agTextColumnFilter", minWidth: 120 },
+    { field: "decision_expected", headerName: "Expected", minWidth: 105 },
+    { field: "decision_actual", headerName: "Actual", minWidth: 100, cellClass: (p) => (p.data.agree ? "font-semibold" : "font-semibold text-[#b42318]") },
+    { field: "agree", headerName: "Agrees", minWidth: 95, cellRenderer: (p: any) => (p.value ? "✓" : "✗"), headerTooltip: "Decision matches the hidden label" },
+    { headerName: "Fields", valueGetter: (p) => `${p.data.fields_ok}/${p.data.fields_total}`, minWidth: 90, comparator: (_a, _b, x, y) => x.data.wrong_fields - y.data.wrong_fields },
+    { headerName: "Evidence", valueGetter: (p) => (p.data.evidence_checked ? `${p.data.evidence_correct}/${p.data.evidence_checked}` : "—"), minWidth: 100 },
+    { field: "payment_blocked", headerName: "Payment", minWidth: 105, valueFormatter: (p) => (p.value ? "blocked" : "eligible") },
+    { field: "latency_ms", headerName: "ms", minWidth: 85, filter: "agNumberColumnFilter", type: "numericColumn" },
+  ], []);
+  return (
+    <div>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <label className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted" aria-hidden />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter cases…" aria-label="Filter evaluation cases" className="h-9 w-64 rounded-lg border border-line-strong bg-surface pl-8 pr-3 text-sm focus:border-teal focus:outline-none" />
+        </label>
+        <Button size="sm" variant="secondary" icon={<Download className="size-3.5" aria-hidden />} onClick={() => ref.current?.api.exportDataAsCsv({ fileName: `quoteguard-eval-${runId.slice(0, 8)}.csv` })}>Export CSV</Button>
+      </div>
+      <AgGridReact ref={ref} theme={theme} rowData={rows} columnDefs={cols} quickFilterText={q} domLayout="autoHeight" tooltipShowDelay={300}
+        defaultColDef={{ sortable: true, resizable: true, flex: 1, floatingFilter: true, filter: true }}
+        getRowStyle={(p) => (p.data && !p.data.agree ? { background: "#fdf1d8" } : undefined)} />
     </div>
   );
 }

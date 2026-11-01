@@ -268,15 +268,33 @@ def explain(db_factory, request_id) -> None:
 
 
 def chat(db: Session, actor: Actor, req: PurchaseRequest, question: str) -> dict:
+    from ..ai import paypal_tools
+    from ..ai.provider import chat_with_tools
+    from ..models import PaymentOperation
+
     if not (2 <= len(question) <= 600):
         raise AppError("INVALID_QUESTION", "Ask a question of 2–600 characters.", 422)
     if req.current_version_id is None:
         raise AppError("REQUEST_NOT_CONFIRMED", "Confirm the requirements first.", 409)
     payload, evid = _explain_input(db, req)
+    op = db.execute(select(PaymentOperation).where(PaymentOperation.request_id == req.id).order_by(PaymentOperation.created_at.desc()).limit(1)).scalar_one_or_none()
+    if op is not None:
+        payload["payment"] = {"state": op.state, "amount": fmt(op.amount), "currency": op.currency, "has_paypal_order": bool(op.provider_order_id), "has_capture": bool(op.provider_capture_id)}
+    user = "Authorised context (data):\n" + json.dumps(payload, default=str) + f"\n\nQuestion: <question>{question}</question>"
+    tools_on = op is not None and paypal_tools.available(op.provider_order_id, op.adapter)
     try:
-        out, meta = chat_json(CHAT_SYSTEM, "Authorised context (data):\n" + json.dumps(payload, default=str) + f"\n\nQuestion: <question>{question}</question>", purpose="chat",
-                              workspace_id=actor.workspace_id, request_id=req.id, max_tokens=700, temperature=0.2)
+        if tools_on:
+            order_id, capture_id = op.provider_order_id, op.provider_capture_id
+            out, meta, trace = chat_with_tools(CHAT_SYSTEM + "\nFor live PayPal payment status, call the read-only PayPal tools instead of guessing.", user, paypal_tools.TOOLS,
+                                               lambda name: paypal_tools.execute(name, order_id, capture_id), purpose="chat", workspace_id=actor.workspace_id, request_id=req.id)
+        else:
+            out, meta = chat_json(CHAT_SYSTEM, user, purpose="chat", workspace_id=actor.workspace_id, request_id=req.id, max_tokens=700, temperature=0.2)
+            trace = []
         cites = [c for c in (out.get("citations") or []) if isinstance(c, str) and c in evid]
-        return {"answer": str(out.get("answer", ""))[:2000], "citations": [{"key": c, **evid[c]} for c in cites], "model": meta["model"]}
+        if trace:
+            audit.event(db, workspace_id=req.workspace_id, request_id=req.id, stage="payment", status="info", title="Assistant queried PayPal (read-only Agent Toolkit tools)",
+                        detail=", ".join(t["tool"] for t in trace), actor=actor.label, tool="paypal_agent_toolkit")
+        return {"answer": str(out.get("answer", ""))[:2000], "citations": [{"key": c, **evid[c]} for c in cites], "model": meta["model"],
+                "tool_calls": [{"tool": t["tool"], "source": t["source"], "result": t["result"]} for t in trace], "tools_available": tools_on}
     except AIUnavailable:
-        return {"answer": "The AI assistant is not available right now. The comparison, evidence and checks on this page are computed without it.", "citations": [], "model": None}
+        return {"answer": "The AI assistant is not available right now. The comparison, evidence and checks on this page are computed without it.", "citations": [], "model": None, "tool_calls": [], "tools_available": tools_on}

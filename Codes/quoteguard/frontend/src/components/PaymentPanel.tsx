@@ -133,7 +133,7 @@ export function CheckoutPanel({ requestId, approval, op: initialOp }: { requestI
                 <p className="mb-3 text-[12.5px] text-muted">Sign in with a PayPal <b>sandbox</b> personal account, or choose “Debit or Credit Card” and use a PayPal sandbox test card.</p>
               )}
               <PayPalScriptProvider options={{ clientId: cfg.data.paypal_client_id, currency: snap.currency, intent: "capture", components: "buttons", "disable-funding": "paylater,venmo" } as any}>
-                <PayPalButtons style={{ layout: "vertical", shape: "rect", label: "pay", height: 46 }} forceReRender={[opId]}
+                <PayPalButtons style={{ layout: "vertical", shape: "rect", label: "pay", height: 46 }}
                   createOrder={async () => {
                     try {
                       const o = await post<Payment>(`/approvals/${approval.id}/checkout`);
@@ -172,6 +172,7 @@ export function Receipt({ requestId, opId }: { requestId: string; opId: string }
   return (
     <div className="grid gap-6">
       <Card className="relative overflow-hidden p-6 md:p-8">
+        {o.state === "completed" && <Burst />}
         <div className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-teal-soft blur-2xl" />
         <div className="relative grid gap-6 md:grid-cols-[1.2fr_1fr]">
           <div>
@@ -179,7 +180,7 @@ export function Receipt({ requestId, opId }: { requestId: string; opId: string }
               {o.state === "completed" ? `Verified by ${o.adapter === "sandbox" ? "PayPal Sandbox" : "simulated provider (Demo Lab)"}` : PAYMENT_STATUS[o.state]?.label}
             </Badge>
             <div className="mt-3 text-[13px] uppercase tracking-wider text-muted">Captured amount</div>
-            <div className="font-display text-[56px] leading-none tnum text-ink">{money(o.captured_amount ?? o.amount, o.currency)}</div>
+            <div className="pop-in font-display text-[56px] leading-none tnum text-ink">{money(o.captured_amount ?? o.amount, o.currency)}</div>
             <p className="mt-2 text-sm text-muted">{o.request_title} · paid to <span className="font-mono">{o.merchant_id}</span> · {dateTime(o.completed_at ?? o.updated_at)}</p>
           </div>
           <dl className="grid content-start grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[13px]">
@@ -240,5 +241,18 @@ function RefundDialog({ open, onClose, op, onDone }: { open: boolean; onClose: (
         <Field label="Reason (required)"><input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. 2 headsets arrived damaged" /></Field>
       </div>
     </Dialog>
+  );
+}
+
+/** One-shot celebration when a capture is confirmed by the provider (skipped with reduced motion). */
+function Burst() {
+  const colors = ["#14b8a6", "#0f766e", "#f59e0b", "#0f2541", "#5eead4"];
+  return (
+    <div className="pointer-events-none absolute left-[18%] top-[40%] z-0" aria-hidden>
+      {Array.from({ length: 22 }, (_, i) => {
+        const a = (i / 22) * Math.PI * 2, r = 90 + (i % 4) * 28;
+        return <span key={i} className="burst-dot" style={{ background: colors[i % colors.length], ["--dx" as any]: `${Math.cos(a) * r}px`, ["--dy" as any]: `${Math.sin(a) * r}px`, animationDelay: `${(i % 5) * 30}ms` }} />;
+      })}
+    </div>
   );
 }

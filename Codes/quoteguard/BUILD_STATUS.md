@@ -17,9 +17,9 @@ Legend: ✅ implemented and verified · 🟡 implemented, verification needs a c
 | Recommendation + “why the cheapest loses” + cited explanation (LLM phrases, never decides) | ✅ | test 1, e2e |
 | Version-bound approval: canonical snapshot hash, expiry, HMAC token, re-validation before order and capture | ✅ | tests 5, 6, 9 |
 | PayPal Sandbox order creation from snapshot with `PayPal-Request-Id` | ✅ | live sandbox (order `9PP37766SL637140C`), e2e |
-| PayPal buyer approval + capture | 🟡 | implemented + mocked tests 9–12; live capture needs a sandbox buyer login (manual checklist) |
+| PayPal buyer approval + capture | 🟡 | implemented + mocked tests 9–12; live run reached PayPal buyer login and approval, which PayPal rejected with `UNSUPPORTED_PAYEE_CURRENCY` because both sandbox accounts are India-registered (needs US sandbox accounts — see TESTING.md) |
 | Reconciliation, durable jobs, crash recovery | ✅ | tests 11, 12 |
-| Signed webhook handling (store → verify → dedupe → lookup) | 🟡 | test 13; webhook subscription not registered on the live app yet (`cli register-webhook`) |
+| Signed webhook handling (store → verify → dedupe → lookup) | ✅ | test 13; webhook subscription registered for the live app (1 Nov 2026) |
 | Comparison, approval, checkout and receipt screens | ✅ | e2e screenshots |
 | Three reproducible sample quotations + extra fixtures | ✅ | `fixtures/` |
 | Tests for payment and authorization boundaries | ✅ | 33 backend tests |
@@ -39,7 +39,9 @@ Legend: ✅ implemented and verified · 🟡 implemented, verification needs a c
 | Capability | Status |
 |---|---|
 | Merchant-admin partial refund with concurrency guard | 🟡 implemented, test 18; live sandbox refund not yet run |
-| Grounded Q&A side panel | ✅ |
+| Grounded Q&A side panel with read-only PayPal Agent Toolkit tools (order details, transaction lookup) | ✅ (test + live sandbox call) |
+| Agent Mode: autonomous pipeline with two human checkpoints | ✅ (e2e) |
+| “What QuoteGuard caught” impact card; AG Grid live what-if column, tooltips, CSV export; AG Grid evaluation grid with filters | ✅ |
 | OCR for image-only PDFs via vision model (always needs review) | ✅ (hosted config enables it) |
 | Bengali/Hindi input | ⏸ |
 | Voice input | ⏸ |

@@ -11,7 +11,7 @@ Four kinds of evidence, kept separate:
 
 ## Results — 31 October 2026
 
-**Backend (pytest 9.2, PostgreSQL 16):** `33 passed` (run 3× consecutively, no flakes, ~35 s).
+**Backend (pytest 9.2, PostgreSQL 16):** `34 passed` (incl. Agent Toolkit tool scoping) (run 3× consecutively, no flakes, ~35 s).
 
 | # (brief §14) | Test |
 |---|---|
@@ -71,10 +71,10 @@ Status as of this build — **credentials present; order creation verified live;
 | Order creation with `PayPal-Request-Id`, payee merchant `9S9B6S73K59HQ` | approve ClearWave → Pay step | ✅ verified (e.g. order `9PP37766SL637140C`) |
 | Duplicate checkout returns same order | click Pay twice / Demo Lab | ✅ verified (same operation, one create call) |
 | Capture refused before buyer approval | Capture without approving | ✅ verified (`PAYER_NOT_APPROVED`) |
-| Buyer login + approval in PayPal popup | sandbox personal account | ⏳ run manually |
+| Buyer login + approval in PayPal popup | sandbox personal account (`e2e/sandbox-capture.spec.ts`) | ✅ login reached; PayPal returned `UNSUPPORTED_PAYEE_CURRENCY` for IN merchant + IN buyer in USD — use US-region sandbox accounts |
 | Capture COMPLETED, IDs on receipt | after approval | ⏳ run manually |
 | Lost capture response → reconciling → completed | Pay step: “discard PayPal's capture response”, then approve | ⏳ run manually |
-| Webhook delivery verified (`PAYMENT.CAPTURE.COMPLETED`) | register webhook (DEPLOYMENT.md), capture, check Payments → webhooks | ⏳ webhook not registered yet |
+| Webhook delivery verified (`PAYMENT.CAPTURE.COMPLETED`) | capture, then Payments → webhooks | ⏳ webhook registered; awaiting first capture |
 | Partial refund | Receipt → Partial refund (admin) | ⏳ run manually after a capture |
 
 Webhook simulator note: events sent from the PayPal dashboard simulator are not tied to a real order and their signature verification semantics differ from app-generated events, so they are not used as proof of a transaction.

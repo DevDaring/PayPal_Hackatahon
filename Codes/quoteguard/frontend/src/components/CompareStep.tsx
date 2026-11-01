@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef, type ICellRendererParams } from "ag-grid-community";
-import { ArrowRight, Award, Bot, CircleHelp, CreditCard, Info, Scale, SlidersHorizontal, TrendingDown, XCircle } from "lucide-react";
+import { ArrowRight, Award, Bot, CircleHelp, CreditCard, Download, Info, Radar, Scale, SlidersHorizontal, TrendingDown, XCircle } from "lucide-react";
 import { api, errorText } from "../lib/api";
 import { dateOnly, money } from "../lib/format";
 import { useRoles } from "../lib/session";
@@ -60,7 +60,10 @@ export function CompareStep({ req, cmp, onOpen }: { req: RequestDetail; cmp: Com
   const rows: Row[] = useMemo(() => [...cmp.quotes].sort((a, b) => (a.outcome.compliant_rank ?? 99) - (b.outcome.compliant_rank ?? 99) || Number(a.outcome.verified_total ?? 1e9) - Number(b.outcome.verified_total ?? 1e9))
     .map((q) => ({ ...q, rec: q.quote_id === s?.best_compliant_quote_id })), [cmp, s]);
 
-  const cols: ColDef<Row>[] = useMemo(() => [
+  const gridRef = useRef<AgGridReact<Row>>(null);
+  const [preview, setPreview] = useState<any>(null);
+  const previewBy = useMemo(() => new Map<string, any>((preview?.outcomes ?? []).map((o: any) => [o.quote_id, o])), [preview]);
+  const baseCols: ColDef<Row>[] = useMemo(() => [
     {
       headerName: "Supplier", field: "supplier", pinned: "left", minWidth: 190, flex: 1.3,
       cellRenderer: (p: ICellRendererParams<Row>) => (
@@ -101,6 +104,33 @@ export function CompareStep({ req, cmp, onOpen }: { req: RequestDetail; cmp: Com
     },
   ], [spec]);
 
+  const cols: ColDef<Row>[] = useMemo(() => {
+    const v = (q: Row) => q.version;
+    const getters: Record<string, (q: Row) => unknown> = {
+      Supplier: (q) => q.supplier, Checks: (q) => q.outcome.mandatory_status, Items: (q) => v(q).subtotal, Shipping: (q) => v(q).shipping, Tax: (q) => v(q).tax,
+      "Delivery (claim)": (q) => v(q).delivery_days, Connector: (q) => v(q).attributes.connector, Mic: (q) => v(q).attributes.microphone, "Valid until": (q) => v(q).valid_until,
+      Checkout: (q) => (q.outcome.checkout_available ? q.merchant?.adapter : "not configured"),
+    };
+    const tips: Record<string, string> = {
+      Checks: "Every mandatory requirement: pass, fail or unknown. Missing evidence is never a pass.", "Verified total": "Subtotal + shipping + tax − discount, recomputed in Decimal and matched to the stated total.",
+      Shipping: "Red when shipping alone pushes the total over budget.", "Delivery (claim)": "Supplier's promise, not verified fulfilment.", Checkout: "Separate from compliance: does an admin-verified PayPal merchant exist for this supplier?",
+    };
+    const out = baseCols.map((c) => ({ ...c, valueGetter: c.valueGetter ?? (getters[c.headerName ?? ""] ? (p: any) => getters[c.headerName!](p.data) : undefined), headerTooltip: tips[c.headerName ?? ""] })) as ColDef<Row>[];
+    if (preview) {
+      out.push({
+        headerName: "What-if", colId: "whatif", pinned: "right", minWidth: 150, enableCellChangeFlash: true, headerTooltip: "Live preview from the what-if explorer — never used for payment",
+        valueGetter: (p: any) => previewBy.get(p.data.quote_id)?.mandatory_status ?? "",
+        cellRenderer: (p: ICellRendererParams<Row>) => {
+          const after = previewBy.get(p.data!.quote_id);
+          if (!after) return null;
+          const changed = after.mandatory_status !== p.data!.outcome.mandatory_status;
+          return <div className={cx("flex h-full items-center gap-1", changed && "font-semibold")}>{changed && <span className="text-[11px] text-muted">→</span>}<CheckBadge status={after.mandatory_status} label={after.compliant_rank === 1 ? "Best" : undefined} /></div>;
+        },
+      });
+    }
+    return out;
+  }, [baseCols, preview, previewBy]);
+
   const fieldForCol: Record<string, string> = { "Verified total": "total", Items: "subtotal", Shipping: "shipping", Tax: "tax", "Delivery (claim)": "delivery_days", Connector: "attr:connector", Mic: "attr:microphone", "Valid until": "valid_until", Supplier: "supplier_name" };
 
   if (cmp.quotes.length === 0) return <Card><Empty title="No extracted quotes yet" body="Upload or load sample quotes on the previous step." /></Card>;
@@ -131,10 +161,14 @@ export function CompareStep({ req, cmp, onOpen }: { req: RequestDetail; cmp: Com
         </div>
       </div>
 
+      <ImpactCard cmp={cmp} />
+
       <div>
-        <SectionTitle hint="Deterministic policy · lowest verified total, then fastest delivery · click a cell for its source" right={<Badge tone="neutral" icon={<Scale className="size-3" aria-hidden />}>policy v{cmp.policy.version}</Badge>}>Comparison grid</SectionTitle>
+        <SectionTitle hint="Deterministic policy · lowest verified total, then fastest delivery · click a cell for its source" right={<div className="flex items-center gap-2"><Badge tone="neutral" icon={<Scale className="size-3" aria-hidden />}>policy v{cmp.policy.version}</Badge>
+          <Button size="sm" variant="secondary" icon={<Download className="size-3.5" aria-hidden />} onClick={() => gridRef.current?.api.exportDataAsCsv({ fileName: `quoteguard-comparison-v${cmp.request_version?.version}.csv` })}>CSV</Button></div>}>Comparison grid</SectionTitle>
         <div className="overflow-hidden rounded-2xl border border-line shadow-[var(--shadow-card)]">
-          <AgGridReact<Row> theme={gridTheme} rowData={rows} columnDefs={cols} domLayout="autoHeight" suppressCellFocus={false} ensureDomOrder
+          <AgGridReact<Row> ref={gridRef} theme={gridTheme} rowData={rows} columnDefs={cols} domLayout="autoHeight" suppressCellFocus={false} ensureDomOrder tooltipShowDelay={300}
+            getRowId={(p) => p.data.quote_id}
             defaultColDef={{ sortable: false, resizable: true, suppressMovable: true, flex: 1 }}
             getRowStyle={(p) => (p.data?.rec ? { background: "#f2faf8" } : undefined)}
             onCellClicked={(e) => { const f = fieldForCol[e.colDef.headerName ?? ""]; if (f && e.data) onOpen(openFieldTarget(e.data, f)); }}
@@ -143,7 +177,7 @@ export function CompareStep({ req, cmp, onOpen }: { req: RequestDetail; cmp: Com
         <p className="mt-2 text-[12px] text-muted">Delivery times are supplier claims, not verified fulfilment. Tax values in sample quotes are synthetic fixture terms. “Checkout” is shown separately so integration availability never changes the compliance ranking.</p>
       </div>
 
-      <WhatIf req={req} cmp={cmp} />
+      <WhatIf req={req} cmp={cmp} onPreview={setPreview} />
     </div>
   );
 }
@@ -202,7 +236,7 @@ function RecommendationCard({ cmp, best, onOpen, onApprove }: { cmp: Comparison;
   );
 }
 
-function WhatIf({ req, cmp }: { req: RequestDetail; cmp: Comparison }) {
+function WhatIf({ req, cmp, onPreview }: { req: RequestDetail; cmp: Comparison; onPreview: (r: any) => void }) {
   const spec = cmp.request_version!.requirements;
   const qc = useQueryClient();
   const { isRequester } = useRoles();
@@ -213,11 +247,11 @@ function WhatIf({ req, cmp }: { req: RequestDetail; cmp: Comparison }) {
   const changed = budget !== Number(spec.budget_amount) || days !== (spec.deadline_days ?? 7);
   useEffect(() => { setBudget(Number(spec.budget_amount)); setDays(spec.deadline_days ?? 7); setRes(null); }, [cmp.request_version?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!changed) { setRes(null); return; }
+    if (!changed) { setRes(null); onPreview(null); return; }
     const ac = new AbortController();
     const t = setTimeout(async () => {
       setLoading(true);
-      try { setRes(await api(`/requests/${req.id}/whatif`, { body: { budget: budget.toFixed(2), deadline_days: days }, signal: ac.signal })); } catch (e) { if ((e as Error).name !== "AbortError") toast.error(errorText(e)); } finally { setLoading(false); }
+      try { const r = await api(`/requests/${req.id}/whatif`, { body: { budget: budget.toFixed(2), deadline_days: days }, signal: ac.signal }); setRes(r); onPreview(r); } catch (e) { if ((e as Error).name !== "AbortError") toast.error(errorText(e)); } finally { setLoading(false); }
     }, 250);
     return () => { clearTimeout(t); ac.abort(); };
   }, [budget, days]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -267,6 +301,47 @@ function WhatIf({ req, cmp }: { req: RequestDetail; cmp: Comparison }) {
             </div>
           )}
         </div>
+      </div>
+    </Card>
+  );
+}
+
+/** What QuoteGuard caught — derived only from this comparison's stored facts. */
+function ImpactCard({ cmp }: { cmp: Comparison }) {
+  const spec = cmp.request_version!.requirements;
+  const budget = Number(spec.budget_amount);
+  const best = cmp.quotes.find((q) => q.outcome.compliant_rank === 1);
+  const items: { tone: "bad" | "warn" | "good"; title: string; detail: string }[] = [];
+  for (const q of cmp.quotes) {
+    const v = q.version;
+    const total = q.outcome.computed_total ? Number(q.outcome.computed_total) : null;
+    if (total != null && v.shipping != null && total > budget && total - Number(v.shipping) <= budget)
+      items.push({ tone: "bad", title: `Hidden cost at ${q.supplier}`, detail: `${money(v.shipping, v.currency)} shipping turns a ${money(v.subtotal, v.currency)} item price into ${money(q.outcome.computed_total, v.currency)} — over budget.` });
+    for (const c of q.outcome.checks.filter((c) => c.key.startsWith("attr:") && c.status === "fail"))
+      items.push({ tone: "bad", title: `Wrong spec at ${q.supplier}`, detail: c.detail + (best && total != null && best.outcome.verified_total ? ` Cheaper by ${money(String(Number(best.outcome.verified_total) - total), v.currency)}, but it isn't what you asked for.` : "") });
+    for (const c of q.outcome.checks.filter((c) => c.status === "unknown"))
+      items.push({ tone: "warn", title: `Unknown at ${q.supplier}`, detail: c.detail });
+    if (q.document.suspicious?.length) items.push({ tone: "warn", title: `Injected instructions in ${q.supplier}'s PDF`, detail: "Treated as data — it cannot change your budget, permissions or payee." });
+  }
+  if (!items.length && !best) return null;
+  return (
+    <Card className="p-5">
+      <SectionTitle hint="Computed from this request's stored evidence — nothing here is a model opinion" right={best ? <Badge tone="good">{items.filter((i) => i.tone === "bad").length} costly mistakes avoided</Badge> : null}>
+        <span className="inline-flex items-center gap-1.5"><Radar className="size-4 text-teal" aria-hidden />What QuoteGuard caught</span>
+      </SectionTitle>
+      <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+        {items.slice(0, 6).map((it, i) => (
+          <div key={i} className={cx("rounded-xl border p-3", it.tone === "bad" ? "border-danger-line bg-danger-soft/60" : "border-amber-line bg-amber-soft/60")}>
+            <div className={cx("text-[13.5px] font-semibold", it.tone === "bad" ? "text-danger" : "text-amber")}>{it.title}</div>
+            <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{it.detail}</p>
+          </div>
+        ))}
+        {best && (
+          <div className="rounded-xl border border-teal/25 bg-teal-soft/60 p-3">
+            <div className="text-[13.5px] font-semibold text-teal-strong">Safe choice: {best.supplier}</div>
+            <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{money(best.outcome.verified_total, best.version.currency)} — every requirement evidenced, {money(String(budget - Number(best.outcome.verified_total)), best.version.currency)} under budget, PayPal checkout configured.</p>
+          </div>
+        )}
       </div>
     </Card>
   );

@@ -12,10 +12,14 @@
 
 Any OpenAI-compatible provider works (OpenAI, OpenRouter). With no provider configured, or `MOCK_AI=true`, the deterministic extractor and template explanations are used and the UI says so.
 
+## PayPal Agent Toolkit (read-only, server-scoped)
+
+The request assistant can call two tools from **PayPal's Agent Toolkit** (`paypal-agent-toolkit` 1.11, framework-agnostic `shared` core): `get_order_details` and `list_transactions`, exposed to the model as `paypal_get_order_details` and `paypal_find_capture_transaction`. The tools take **no model-supplied arguments** — the server injects the order/capture ID that belongs to the current request — and no create/capture/refund/invoice tools are registered. The toolkit's own prose result (which can say “successfully captured” for a `CREATED` order) is discarded; only redacted provider fields reach the model. Tool calls are shown in the chat and recorded in the decision replay. Tool rounds are bounded (≤2).
+
 ## What the model can and cannot do
 
 - **Can:** read the text it is given and return JSON.
-- **Cannot:** call tools, fetch URLs, read files or environment variables, execute commands, approve, pay, choose payees, or change budgets. Payment execution is a separate authenticated service.
+- **Cannot:** call any tool other than the two read-only PayPal lookups above, fetch URLs, read files or environment variables, execute commands, approve, pay, choose payees, or change budgets. Payment execution is a separate authenticated service.
 - **Cannot override computation:** totals, arithmetic, pass/fail/unknown and ranking are computed in `domain/policy.py`. Explanations that contradict the computed recommendation are discarded and replaced by a template.
 
 ## Prompts

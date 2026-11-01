@@ -2,7 +2,7 @@
 
 **Tagline:** From supplier PDF to approved PayPal purchase — with evidence for every decision and checks before money moves.
 
-**Categories:** Best Use of PayPal + AI (primary) · Agentic Commerce (secondary)
+**Prize fit:** no tracks — every submission is judged for the Grand Prizes and honorable mentions. Strongest fits: **Best Use of PayPal + AI**, **Best Use of Agentic Commerce**, **Most Impactful**; sponsor prize: **Best Use of AG Grid** (evidence-linked comparison grid).
 
 **Try it:** https://quoteguard.koushikdeb.com — click **Fill to Sign in** on the login page (each sign-in gets its own isolated demo workspace). PayPal runs in **Sandbox**; documents are synthetic.
 
@@ -19,6 +19,8 @@ Small-business operations managers buy equipment from PDF quotes. The headline p
 5. **Pay with PayPal.** The backend builds the PayPal Orders v2 order only from the approved snapshot (the browser cannot send an amount or payee), re-validates the snapshot before order creation and again before capture, and checks the order's amount, currency, custom ID and payee before capturing. Both organisation approval and PayPal buyer approval are required.
 6. **Prove it.** Receipt with order/capture IDs, a Decision Replay of actual recorded events, every provider call, a hash-chained audit log, and a downloadable PDF/JSON evidence package.
 
+**Agent Mode** runs the whole thing autonomously — reading, citing, verifying and recommending — and stops at exactly two human checkpoints: confirming what to buy, and approving the exact purchase. The agent can query PayPal through **PayPal's Agent Toolkit** (read-only order and transaction lookups, scoped by the server to that request), but it has no path to create or capture payments.
+
 **Demo Lab** lets judges attack it: change the amount or payee after approval (including by editing the database directly), upload a PDF that tells the AI to ignore the budget and pay an email address, click Pay five times at once, or drop PayPal's capture response mid-flight. Each scenario runs the real services and reports what actually happened.
 
 ## How we built it
@@ -26,6 +28,7 @@ Small-business operations managers buy equipment from PDF quotes. The headline p
 - **Backend:** Python 3.12, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16, httpx. A shared domain package is used by the API, the worker and Demo Lab.
 - **Agent workflow:** LangGraph `extract_quotes → evaluate_constraints → summarize_recommendation`, with node progress persisted in PostgreSQL so restarts resume. The model gets page text and returns JSON — no tools, no HTTP, no payments.
 - **AI:** Gemini 2.5 Flash through its OpenAI-compatible endpoint (swappable for OpenAI or OpenRouter), versioned prompts, bounded calls, and an extraction cache keyed by document hash, prompt, schema and model.
+- **PayPal Agent Toolkit:** the assistant calls `get_order_details` / `list_transactions` as read-only tools with server-injected IDs (we found the toolkit’s prose can claim “captured” for a CREATED order, so only raw provider fields reach the model).
 - **PayPal:** Orders v2 create/get/capture and Payments v2 refunds from the backend with stable `PayPal-Request-Id`s per logical operation; official PayPal JS SDK buttons for buyer approval; webhook signature verification; reconciliation by authoritative lookup.
 - **Durability:** a PostgreSQL jobs table (transactional outbox), row locks in one global order, unique constraints per approval, no DB transaction held during provider calls, and a crash-recovery sweep.
 - **Frontend:** React 19 + TypeScript + Vite, Tailwind v4, TanStack Query, **AG Grid Community** for the evidence-linked comparison grid, accessible dialogs, keyboard navigation, reduced-motion support.

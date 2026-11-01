@@ -21,11 +21,13 @@ QuoteGuard reads supplier quotations, links every extracted term to the exact li
 | Pay | PayPal Orders v2 + official PayPal buttons | Order built only from the approved snapshot; re-validated before order creation and capture; stable `PayPal-Request-Id`s |
 | Prove | Receipt, decision replay, evidence package | Provider IDs, every provider call, hash-chained audit log (limits stated) |
 
+**Agent Mode** runs the pipeline autonomously and stops at two human checkpoints; the assistant can query PayPal through **PayPal Agent Toolkit** read-only tools scoped to the request.
+
 **Demo Lab** runs controlled attacks through the real services: amount or payee changed after approval (even by editing the database directly), a PDF that tells the AI to ignore the budget and pay an email address, five simultaneous Pay/Capture clicks, and a capture whose response is lost.
 
 ## Measured, not claimed
 
-- 33 backend tests on real PostgreSQL (payments, authorization, concurrency, webhooks, Demo Lab), frontend unit tests, Playwright journey against the live site.
+- 34 backend tests on real PostgreSQL (payments, authorization, concurrency, webhooks, Demo Lab), frontend unit tests, Playwright journey against the live site.
 - 24-case labelled evaluation (clean, ambiguous, malformed, adversarial). Latest Gemini 2.5 Flash run: 24/24 decisions agree, 18/18 unsafe cases blocked, 0/6 false blocks, 379/380 evidence references valid — a single run on synthetic templates. Every run, including the first one that found an unsafe case, is kept in [`Codes/quoteguard/reports/`](Codes/quoteguard/reports/).
 
 ## Documentation

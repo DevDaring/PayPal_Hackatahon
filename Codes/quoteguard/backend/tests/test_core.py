@@ -476,3 +476,23 @@ def test_demo_lab_scenarios_use_real_services(world, scenario, verdict):
     with session_scope() as db:
         r = db.get(DemoScenarioRun, run_id)
         assert (r.status, r.verdict) == ("finished", verdict), r.steps
+
+
+def test_agent_toolkit_tools_are_read_only_and_server_scoped(monkeypatch):
+    from quoteguard.ai import paypal_tools
+
+    names = {t["function"]["name"] for t in paypal_tools.TOOLS}
+    assert names == {"paypal_get_order_details", "paypal_find_capture_transaction"}
+    assert all(t["function"]["parameters"]["properties"] == {} for t in paypal_tools.TOOLS)  # model supplies no arguments
+    assert paypal_tools.execute("pay_order", "ORDER1", None) == {"error": "tool not allowed"}
+    seen = {}
+
+    class FakeAPI:
+        def run(self, method, params):
+            seen[method] = params
+            return '{"message": "has been successfully captured", "status": "CREATED", "raw": {"id": "ORDER1", "status": "CREATED", "purchase_units": [{"amount": {"value": "570.00", "currency_code": "USD"}}]}}'
+
+    monkeypatch.setattr(paypal_tools, "_api", lambda: FakeAPI())
+    res = paypal_tools.execute("paypal_get_order_details", "ORDER1", None)
+    assert seen == {"get_order_details": {"order_id": "ORDER1"}}
+    assert res["order"]["status"] == "CREATED" and "message" not in json.dumps(res)  # toolkit prose is never forwarded

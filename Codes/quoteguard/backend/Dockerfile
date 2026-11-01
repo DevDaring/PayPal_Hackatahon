@@ -3,7 +3,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 COPY requirements.lock .
-RUN pip install --no-cache-dir -r requirements.lock
+COPY requirements-nodeps.txt .
+RUN pip install --no-cache-dir -r requirements.lock && pip install --no-cache-dir --no-deps -r requirements-nodeps.txt
 COPY . .
 RUN useradd -m -u 10001 app && mkdir -p /data/storage && chown -R app /data /app
 USER app

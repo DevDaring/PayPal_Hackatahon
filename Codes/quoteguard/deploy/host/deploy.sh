@@ -15,6 +15,7 @@ cd "$HOST_DIR/backend"
 [ -x .venv/bin/python ] || python3.12 -m venv .venv
 .venv/bin/pip install -q --upgrade pip
 .venv/bin/pip install -q -r requirements.lock
+.venv/bin/pip install -q --no-deps -r requirements-nodeps.txt
 export QUOTEGUARD_ENV_FILE="$HOST_DIR/.env"
 export CODE_REVISION="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unversioned)"
 grep -q '^CODE_REVISION=' "$HOST_DIR/.env" && sed -i "s/^CODE_REVISION=.*/CODE_REVISION=$CODE_REVISION/" "$HOST_DIR/.env" || echo "CODE_REVISION=$CODE_REVISION" >> "$HOST_DIR/.env"

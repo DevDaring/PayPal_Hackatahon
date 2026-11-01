@@ -125,3 +125,57 @@ def chat_json(
 def require_budget(used: int) -> None:
     if used >= get_settings().AI_MAX_CALLS_PER_REQUEST:
         raise AppError("AI_BUDGET_EXCEEDED", "This request reached its AI call limit; continue with manual review.", 429)
+
+
+def chat_with_tools(system: str, user: str, tools: list[dict], run_tool, *, purpose: str, workspace_id=None, request_id=None, max_rounds: int = 2) -> tuple[dict, dict, list[dict]]:
+    """OpenAI-compatible tool calling, bounded to `max_rounds` tool rounds.
+
+    `run_tool(name) -> dict` is supplied by the caller and ignores any model-provided arguments.
+    Returns (parsed_json_answer, meta, trace).
+    """
+    s = get_settings()
+    if not s.ai_configured or s.MOCK_AI:
+        raise AIUnavailable("AI provider is not configured")
+    messages: list[dict] = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    trace: list[dict] = []
+    t_all = time.monotonic()
+    for round_ in range(max_rounds + 1):
+        body = {"model": s.AI_MODEL, "messages": messages, "temperature": 0.2, "max_tokens": 900}
+        if round_ < max_rounds:
+            body["tools"], body["tool_choice"] = tools, "auto"
+        if s.AI_PROVIDER == "gemini":
+            body["reasoning_effort"] = "none" if "2.5-flash" in s.AI_MODEL else "low"
+        t0 = time.monotonic()
+        status, usage = "error", {}
+        try:
+            r = httpx.post(s.AI_BASE_URL.rstrip("/") + "/chat/completions", headers={"Authorization": f"Bearer {_keys().next()}"}, json=body, timeout=s.AI_TIMEOUT_SECONDS)
+            if r.status_code >= 400:
+                raise AIUnavailable(f"provider {r.status_code}")
+            d = r.json()
+            usage = d.get("usage") or {}
+            msg = d["choices"][0]["message"]
+            status = "ok"
+        except (httpx.HTTPError, KeyError, ValueError) as e:
+            raise AIUnavailable(type(e).__name__) from None
+        finally:
+            try:
+                with session_scope() as db:
+                    db.add(AICall(workspace_id=workspace_id, request_id=request_id, purpose=purpose, provider=s.AI_PROVIDER, model=s.AI_MODEL, status=status,
+                                  latency_ms=int((time.monotonic() - t0) * 1000), prompt_tokens=usage.get("prompt_tokens"), completion_tokens=usage.get("completion_tokens")))
+            except Exception:
+                log.warning("ai call log failed")
+        calls = msg.get("tool_calls") or []
+        if not calls:
+            content = msg.get("content") or ""
+            try:
+                parsed = _parse_json(content)
+            except ValueError:
+                parsed = {"answer": content.strip(), "citations": []}
+            return parsed, {"model": s.AI_MODEL, "provider": s.AI_PROVIDER, "latency_ms": int((time.monotonic() - t_all) * 1000)}, trace
+        messages.append({k: v for k, v in msg.items() if k in ("role", "content", "tool_calls", "extra_content")} | {"role": "assistant"})
+        for c in calls[:3]:
+            name = (c.get("function") or {}).get("name", "")
+            result = run_tool(name)
+            trace.append({"tool": name, "source": "PayPal Agent Toolkit", "result": result})
+            messages.append({"role": "tool", "tool_call_id": c.get("id", name), "content": json.dumps(result, default=str)})
+    raise AIUnavailable("tool loop did not finish")

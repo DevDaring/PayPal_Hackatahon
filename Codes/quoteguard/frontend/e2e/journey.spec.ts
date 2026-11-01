@@ -19,8 +19,8 @@ test("sample purchase reaches a PayPal sandbox order bound to the approved snaps
   await page.getByRole("button", { name: "Confirm requirements" }).click();
 
   await page.getByRole("button", { name: "Load 3 sample quotes" }).click();
-  await expect(page.getByText("Extracted").first()).toBeVisible();
-  await expect(page.getByText("Extracted")).toHaveCount(3, { timeout: 120_000 });
+  await expect(page.getByText("Extracted", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Extracted", { exact: true })).toHaveCount(3, { timeout: 120_000 });
   await page.waitForTimeout(1500);
   await shot(page, "04-evidence");
 

@@ -13,3 +13,4 @@ pypdfium2==5.14.0
 reportlab==5.1.0
 python-multipart==0.0.33
 tzdata
+requests==2.34.2

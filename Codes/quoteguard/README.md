@@ -25,6 +25,8 @@ Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). Quo
 
 **Sample scenario** (synthetic, fictitious suppliers): Northstar Office $640 (hidden $160 expedited shipping → over budget), ClearWave Supplies $570 (compliant, configured sandbox merchant), Harbor Devices $470 (cheapest, but USB-A → fails). Raising the budget to $650 makes Northstar compliant but not cheapest; lowering it to $560 leaves no compliant quote — QuoteGuard never forces a recommendation.
 
+**Agent Mode** runs the pipeline autonomously and stops at two human checkpoints; the assistant can query PayPal through **PayPal Agent Toolkit** read-only tools scoped to the request.
+
 **Demo Lab** runs controlled attacks through the same services: amount changed after approval, payee changed after approval (including direct database tampering), a PDF that tells the AI to ignore the budget and pay an email address, five simultaneous Pay/Capture clicks, and a capture whose response is lost.
 
 ## Architecture in one picture
@@ -93,7 +95,7 @@ On the **Pay** step, click *Pay with PayPal* and sign in with a PayPal **sandbox
 ## Tests and evaluation
 
 ```bash
-cd backend && .venv/bin/pytest -q                  # 33 tests on real PostgreSQL (payments, authorization, concurrency, webhooks, Demo Lab)
+cd backend && .venv/bin/pytest -q                  # 34 tests on real PostgreSQL (payments, authorization, concurrency, webhooks, Demo Lab)
 cd frontend && npm test                            # unit tests (Vitest)
 BASE_URL=https://quoteguard.koushikdeb.com npx playwright test   # critical journey up to the PayPal buttons
 cd backend && .venv/bin/python -m quoteguard.cli run-eval llm    # 24-case labelled evaluation → Evaluation page

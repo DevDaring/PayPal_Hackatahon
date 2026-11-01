@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, FileSearch, Fingerprint, Hourglass, Play, Plus, RefreshCcw, ShieldCheck, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bot, CheckCircle2, ClipboardList, FileSearch, Fingerprint, Hourglass, Play, Plus, RefreshCcw, ShieldCheck, Wallet } from "lucide-react";
 import { api, errorText, post } from "../lib/api";
 import { money, PAYMENT_STATUS, relative, REQUEST_STATUS } from "../lib/format";
 import { useSession } from "../lib/session";
@@ -43,7 +43,8 @@ export default function Overview() {
               30 USB-C headsets, $600 budget, delivery in 7 days. Three synthetic supplier quotes — the cheapest one hides a wrong connector, another hides $160 of shipping.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <Button size="lg" className="bg-teal-bright! text-navy-900! hover:bg-white!" loading={sample.isPending} icon={<Play className="size-4" aria-hidden />} onClick={() => sample.mutate()}>
+              <Link to="/agent"><Button size="lg" className="bg-teal-bright! text-navy-900! hover:bg-white!" icon={<Bot className="size-4" aria-hidden />}>Watch the agent work</Button></Link>
+              <Button size="lg" variant="ghost" className="border border-white/20 text-white! hover:bg-white/10!" loading={sample.isPending} icon={<Play className="size-4" aria-hidden />} onClick={() => sample.mutate()}>
                 Try sample purchase
               </Button>
               <Link to="/demo-lab"><Button size="lg" variant="ghost" className="text-white! hover:bg-white/10!">Open Demo Lab <ArrowRight className="size-4" aria-hidden /></Button></Link>

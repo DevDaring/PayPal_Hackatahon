@@ -15,6 +15,7 @@ const PaymentPage = lazy(() => import("./pages/PaymentPage"));
 const DemoLab = lazy(() => import("./pages/DemoLab"));
 const Evaluation = lazy(() => import("./pages/Evaluation"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
+const AgentMode = lazy(() => import("./pages/AgentMode"));
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { me, loading } = useSession();
@@ -41,6 +42,7 @@ export function App() {
           <Route path="demo-lab" element={<DemoLab />} />
           <Route path="evaluation" element={<Evaluation />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="agent" element={<AgentMode />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
