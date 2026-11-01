@@ -63,18 +63,18 @@ Caveats: single runs, so no latency percentiles (individual timings are shown); 
 
 ## Manual real-sandbox checklist
 
-Status as of this build — **credentials present; order creation verified live; buyer approval and capture require a sandbox personal (buyer) account login and were not run by the build agent.**
+Status as of 1 Nov 2026 — **full real-sandbox purchase verified** with US-region sandbox merchant `AT2QVVSQLWMDQ` and a US sandbox buyer (the first attempt with India-registered accounts was rejected by PayPal with `UNSUPPORTED_PAYEE_CURRENCY`).
 
 | Step | How | Status |
 |---|---|---|
 | OAuth client-credentials token | backend start / first order | ✅ verified (sandbox) |
-| Order creation with `PayPal-Request-Id`, payee merchant `9S9B6S73K59HQ` | approve ClearWave → Pay step | ✅ verified (e.g. order `9PP37766SL637140C`) |
+| Order creation with `PayPal-Request-Id`, payee merchant validated before capture | approve ClearWave → Pay step | ✅ verified (e.g. order `9PP37766SL637140C`) |
 | Duplicate checkout returns same order | click Pay twice / Demo Lab | ✅ verified (same operation, one create call) |
 | Capture refused before buyer approval | Capture without approving | ✅ verified (`PAYER_NOT_APPROVED`) |
-| Buyer login + approval in PayPal popup | sandbox personal account (`e2e/sandbox-capture.spec.ts`) | ✅ login reached; PayPal returned `UNSUPPORTED_PAYEE_CURRENCY` for IN merchant + IN buyer in USD — use US-region sandbox accounts |
-| Capture COMPLETED, IDs on receipt | after approval | ⏳ run manually |
+| Buyer login + approval in PayPal popup | `e2e/sandbox-capture.spec.ts` (US sandbox buyer) | ✅ verified |
+| Capture COMPLETED, IDs on receipt | after approval | ✅ order `8J490246E38235409`, capture `6KR959288R730242A`, USD 570.00 |
 | Lost capture response → reconciling → completed | Pay step: “discard PayPal's capture response”, then approve | ⏳ run manually |
-| Webhook delivery verified (`PAYMENT.CAPTURE.COMPLETED`) | capture, then Payments → webhooks | ⏳ webhook registered; awaiting first capture |
+| Webhook delivery verified | `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED` | ✅ both signature-verified with PayPal and applied via lookup |
 | Partial refund | Receipt → Partial refund (admin) | ⏳ run manually after a capture |
 
 Webhook simulator note: events sent from the PayPal dashboard simulator are not tied to a real order and their signature verification semantics differ from app-generated events, so they are not used as proof of a transaction.
