@@ -86,7 +86,7 @@ export default function Evaluation() {
             </Card>
           </div>
           <CaseGrid cases={d.cases} runId={d.id} />
-          <Callout tone="info" title="Honest limitations">Synthetic documents from one template family; the deterministic baseline was written alongside these templates, so its scores overstate real-world accuracy. Model confidence is not reported (no calibrated percentages). Checkout is assumed configured in evaluation so extraction and policy are measured in isolation.</Callout>
+          <Callout tone="info" title="Honest limitations">{d.dataset_version.includes("holdout") ? "Synthetic quotes from a separate generator with unfamiliar layouts; labels were committed before the first run. Runs marked “seen” came after fixing defects this set exposed, so only the unseen runs measure generalisation." : "Synthetic documents from one template family; the deterministic baseline was written alongside these templates, so its scores overstate real-world accuracy."} Model confidence is not reported (no calibrated percentages). Checkout is assumed configured in evaluation so extraction and policy are measured in isolation.</Callout>
         </div>
       )}
     </div>
@@ -111,7 +111,7 @@ function CaseGrid({ cases, runId }: { cases: any[]; runId: string }) {
     { field: "agree", headerName: "Agrees", minWidth: 95, cellRenderer: (p: any) => (p.value ? "✓" : "✗"), headerTooltip: "Decision matches the hidden label" },
     { headerName: "Fields", valueGetter: (p) => `${p.data.fields_ok}/${p.data.fields_total}`, minWidth: 90, comparator: (_a, _b, x, y) => x.data.wrong_fields - y.data.wrong_fields },
     { headerName: "Evidence", valueGetter: (p) => (p.data.evidence_checked ? `${p.data.evidence_correct}/${p.data.evidence_checked}` : "—"), minWidth: 100 },
-    { field: "payment_blocked", headerName: "Payment", minWidth: 105, valueFormatter: (p) => (p.value ? "blocked" : "eligible") },
+    { field: "payment_blocked", headerName: "Payment", minWidth: 105, cellDataType: false, valueFormatter: (p) => (p.value ? "blocked" : "eligible") },
     { field: "latency_ms", headerName: "ms", minWidth: 85, filter: "agNumberColumnFilter", type: "numericColumn" },
   ], []);
   return (
@@ -130,40 +130,45 @@ function CaseGrid({ cases, runId }: { cases: any[]; runId: string }) {
   );
 }
 
-/** Same inputs, same labels: deterministic parser vs every AI run (none hidden). */
+/** Same inputs, same labels: every run in time order, rules and AI side by side (none hidden). */
 function RulesVsAi({ runs }: { runs: any[] }) {
-  const done = runs.filter((r) => r.status === "finished" && r.summary);
-  const rules = done.find((r) => r.extraction_mode === "rules");
-  const ai = done.filter((r) => r.extraction_mode === "llm");
-  if (!rules || !ai.length) return null;
-  const row = (label: string, f: (s: any) => string, better?: "high" | "low", num?: (s: any) => number) => {
-    const vals = ai.map((r) => (num ? num(r.summary) : 0));
-    const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-    const rv = num ? num(rules.summary) : 0;
-    const win = better && num ? (better === "high" ? mean > rv : mean < rv) : false;
-    return (
-      <tr key={label} className="border-t border-line">
-        <td className="py-2 pr-3 text-[13px] text-ink-2">{label}</td>
-        <td className="py-2 pr-3 text-[13px] tnum">{f(rules.summary)}</td>
-        {ai.map((r) => <td key={r.id} className={cx("py-2 pr-3 text-[13px] tnum", win && "font-semibold text-teal-strong")}>{f(r.summary)}</td>)}
-      </tr>
-    );
-  };
+  const cols = runs.filter((r) => r.status === "finished" && r.summary).sort((a, b) => a.started_at.localeCompare(b.started_at));
+  if (!cols.some((r) => r.extraction_mode === "rules") || !cols.some((r) => r.extraction_mode === "llm")) return null;
+  const holdout = cols[0].dataset_version.includes("holdout");
   const frac = (o: any) => `${o.agree ?? o.correct ?? o.blocked ?? o.count ?? o.needs_review}/${o.total ?? o.checked}`;
+  const fieldTotals = (s: any) => { const v = Object.values(s.field_accuracy) as any[]; return `${v.reduce((a, x) => a + x.correct, 0)}/${v.reduce((a, x) => a + x.total, 0)}`; };
+  const rows: [string, (s: any) => string][] = [
+    ["Decisions matching labels", (s) => frac(s.decision_agreement)],
+    ["False eligibility (non-payable marked payable)", (s) => `${s.false_eligibility?.count ?? s.unsafe_payment_attempts.total - s.unsafe_payment_attempts.blocked}/${s.unsafe_payment_attempts.total}`],
+    ["False blocks (payable marked not payable)", (s) => frac(s.false_blocking)],
+    ["Cases needing human review", (s) => (s.review_burden ? frac(s.review_burden) : "—")],
+    ["Field accuracy (all fields)", fieldTotals],
+    ["Cited lines found on cited page", (s) => frac(s.evidence)],
+    ["Median time per document", (s) => `${s.latency_ms.median} ms`],
+    ["Model tokens (prompt + completion)", (s) => (s.tokens ? (s.tokens.prompt_tokens + s.tokens.completion_tokens).toLocaleString() : "—")],
+  ];
   return (
     <Card className="mb-5 overflow-x-auto p-5">
-      <SectionTitle hint="Same PDFs and frozen labels for every column. Green = AI average better than the deterministic parser. “Unseen” runs happened before any code change prompted by this dataset.">Rules vs AI on these documents</SectionTitle>
-      <table className="w-full min-w-[560px]">
-        <thead><tr className="text-left text-[11.5px] uppercase tracking-wider text-muted"><th className="pb-2 font-medium">Measure</th><th className="pb-2 font-medium">Rules parser</th>{ai.map((r, i) => <th key={r.id} className="pb-2 font-medium">AI run {i + 1}<div className="normal-case tracking-normal">{r.dataset_version.includes("holdout") ? (r.config?.holdout_status ? <Badge tone="warn">seen · after fixes</Badge> : <Badge tone="good">unseen</Badge>) : null}</div></th>)}</tr></thead>
+      <SectionTitle hint={`Same PDFs and frozen labels in every column, oldest run first.${holdout ? " “Unseen” runs happened before any code change prompted by this dataset; “seen” runs came after we fixed what it exposed." : ""}`}>Rules vs AI on these documents</SectionTitle>
+      <table className="w-full min-w-[640px]">
+        <thead>
+          <tr className="text-left align-bottom text-[11.5px] uppercase tracking-wider text-muted">
+            <th className="pb-2 font-medium">Measure</th>
+            {cols.map((r) => (
+              <th key={r.id} className={cx("pb-2 pr-3 font-medium", r.extraction_mode === "llm" && "text-teal-strong")}>
+                {r.extraction_mode === "llm" ? "AI + checks" : "Rules"}
+                <div className="normal-case tracking-normal">{holdout ? (r.config?.holdout_status ? <Badge tone="warn">seen</Badge> : <Badge tone="good">unseen</Badge>) : <span className="text-[11px]">{dateTime(r.started_at)}</span>}</div>
+              </th>
+            ))}
+          </tr>
+        </thead>
         <tbody>
-          {row("Decisions matching labels", (s) => frac(s.decision_agreement), "high", (s) => s.decision_agreement.agree)}
-          {row("False eligibility (non-payable marked payable)", (s) => `${s.false_eligibility?.count ?? s.unsafe_payment_attempts.total - s.unsafe_payment_attempts.blocked}/${s.unsafe_payment_attempts.total}`, "low", (s) => s.false_eligibility?.count ?? s.unsafe_payment_attempts.total - s.unsafe_payment_attempts.blocked)}
-          {row("False blocks (payable marked not payable)", (s) => frac(s.false_blocking), "low", (s) => s.false_blocking.blocked)}
-          {row("Cases needing human review", (s) => (s.review_burden ? frac(s.review_burden) : "—"), "low", (s) => s.review_burden?.needs_review ?? 99)}
-          {row("Field accuracy (all fields)", (s) => { const v = Object.values(s.field_accuracy) as any[]; const c = v.reduce((a, x) => a + x.correct, 0), t = v.reduce((a, x) => a + x.total, 0); return `${c}/${t}`; }, "high", (s) => (Object.values(s.field_accuracy) as any[]).reduce((a, x) => a + x.correct, 0))}
-          {row("Cited lines found on cited page", (s) => frac(s.evidence))}
-          {row("Median time per document", (s) => `${s.latency_ms.median} ms`)}
-          {row("Model tokens (prompt + completion)", (s) => (s.tokens ? `${(s.tokens.prompt_tokens + s.tokens.completion_tokens).toLocaleString()}` : "—"))}
+          {rows.map(([label, f]) => (
+            <tr key={label} className="border-t border-line">
+              <td className="py-2 pr-3 text-[13px] text-ink-2">{label}</td>
+              {cols.map((r) => <td key={r.id} className={cx("py-2 pr-3 text-[13px] tnum", r.extraction_mode === "llm" && "font-semibold text-ink")}>{f(r.summary)}</td>)}
+            </tr>
+          ))}
         </tbody>
       </table>
     </Card>

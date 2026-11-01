@@ -25,7 +25,7 @@ Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). Quo
 
 **Sample scenario** (synthetic, fictitious suppliers): Northstar Office $640 (hidden $160 expedited shipping → over budget), ClearWave Supplies $570 (compliant, configured sandbox merchant), Harbor Devices $470 (cheapest, but USB-A → fails). Raising the budget to $650 makes Northstar compliant but not cheapest; lowering it to $560 leaves no compliant quote — QuoteGuard never forces a recommendation.
 
-**Agent Mode** runs the pipeline autonomously and stops at two human checkpoints; the assistant can query PayPal through **PayPal Agent Toolkit** read-only tools scoped to the request.
+**Agent Mode** runs a resumable workflow on your own request and PDFs (or the sample): it reads, cites, verifies and decides on its own, and stops at the three consents it cannot give — you confirm the requirements, an approver signs the exact purchase, the buyer authorises in PayPal. The assistant can query PayPal through **PayPal Agent Toolkit** read-only tools scoped by the server to the request.
 
 **Demo Lab** runs controlled attacks through the same services: amount changed after approval, payee changed after approval (including direct database tampering), a PDF that tells the AI to ignore the budget and pay an email address, five simultaneous Pay/Capture clicks, and a capture whose response is lost.
 
@@ -54,7 +54,7 @@ backend/            FastAPI app, worker, shared domain package (quoteguard/), Al
   quoteguard/ai         OpenAI-compatible provider, versioned prompts, requirement parser, quote extractor
   quoteguard/documents  upload validation, sandboxed PDF parsing, evidence location, injection signals
 frontend/           React 19 + TypeScript + Vite, Tailwind v4, TanStack Query, AG Grid Community, PayPal JS SDK, Playwright e2e
-fixtures/           synthetic sample PDFs, 24-case evaluation set, eval_manifest.json (labels kept separate)
+fixtures/           synthetic sample PDFs, 24-case development set + 26-case independent holdout, manifests with labels kept separate
 reports/            stored evaluation runs (measured, timestamped)
 deploy/host/        self-hosting scripts (run/stop/autostart/deploy) used for the live demo
 docs/, submission/  documentation, Devpost copy, demo script
@@ -95,10 +95,10 @@ On the **Pay** step, click *Pay with PayPal* and sign in with a PayPal **sandbox
 ## Tests and evaluation
 
 ```bash
-cd backend && .venv/bin/pytest -q                  # 34 tests on real PostgreSQL (payments, authorization, concurrency, webhooks, Demo Lab)
+cd backend && .venv/bin/pytest -q                  # 61 tests on real PostgreSQL (payments, recovery, authorization, negated specs, concurrency, webhooks, Demo Lab)
 cd frontend && npm test                            # unit tests (Vitest)
 BASE_URL=https://quoteguard.koushikdeb.com npx playwright test   # critical journey up to the PayPal buttons
-cd backend && .venv/bin/python -m quoteguard.cli run-eval llm    # 24-case labelled evaluation → Evaluation page
+cd backend && .venv/bin/python -m quoteguard.cli run-eval llm quoteguard-holdout-v1   # 26 unfamiliar quotes (also: rules, quoteguard-eval-v1)
 ```
 
 Latest measured results are in [`docs/TESTING.md`](docs/TESTING.md) and [`reports/`](reports/).

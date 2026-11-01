@@ -1,0 +1,1822 @@
+{
+  "id": "70bcdfc4-6ad5-4a77-9269-fdd2cc41c614",
+  "status": "finished",
+  "dataset_version": "quoteguard-holdout-v1",
+  "provider": "none",
+  "model": "deterministic-rules-v1",
+  "extraction_mode": "rules",
+  "code_revision": "88d7c4d",
+  "config": {
+    "budget": "600.00",
+    "ocr_provider": "gemini",
+    "deadline_days": 7,
+    "scenario_date": "2026-11-02",
+    "holdout_status": "seen \u2014 after fixing 2 defects the holdout exposed",
+    "labels_visible_to_model": false,
+    "checkout_assumed_configured": true
+  },
+  "summary": {
+    "cases": 26,
+    "tokens": {
+      "model_calls": 0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0
+    },
+    "evidence": {
+      "rate": 1.0,
+      "checked": 147,
+      "correct": 147
+    },
+    "latency_ms": {
+      "count": 26,
+      "median": 24,
+      "samples": [
+        86,
+        101,
+        25,
+        25,
+        25,
+        25,
+        22,
+        22,
+        27,
+        20,
+        21,
+        23,
+        21,
+        21,
+        22,
+        24,
+        21,
+        21,
+        32,
+        25,
+        24,
+        24,
+        23,
+        24,
+        21,
+        1948
+      ]
+    },
+    "by_category": {
+      "ocr": {
+        "agree": 1,
+        "total": 1
+      },
+      "malformed": {
+        "agree": 1,
+        "total": 1
+      },
+      "multi-page": {
+        "agree": 1,
+        "total": 2
+      },
+      "adversarial": {
+        "agree": 0,
+        "total": 2
+      },
+      "missing-cost": {
+        "agree": 2,
+        "total": 2
+      },
+      "negated-spec": {
+        "agree": 4,
+        "total": 4
+      },
+      "revised-offer": {
+        "agree": 0,
+        "total": 2
+      },
+      "optional-charges": {
+        "agree": 0,
+        "total": 2
+      },
+      "unfamiliar-layout": {
+        "agree": 1,
+        "total": 8
+      },
+      "ambiguous-currency": {
+        "agree": 2,
+        "total": 2
+      }
+    },
+    "review_burden": {
+      "note": "Cases ending 'unknown' need a person (ask supplier or correct a field).",
+      "total": 26,
+      "needs_review": 22
+    },
+    "false_blocking": {
+      "total": 8,
+      "blocked": 8
+    },
+    "field_accuracy": {
+      "tax": {
+        "total": 26,
+        "correct": 16,
+        "accuracy": 0.6154
+      },
+      "total": {
+        "total": 26,
+        "correct": 16,
+        "accuracy": 0.6154
+      },
+      "currency": {
+        "total": 26,
+        "correct": 25,
+        "accuracy": 0.9615
+      },
+      "quantity": {
+        "total": 26,
+        "correct": 0,
+        "accuracy": 0.0
+      },
+      "shipping": {
+        "total": 26,
+        "correct": 15,
+        "accuracy": 0.5769
+      },
+      "subtotal": {
+        "total": 26,
+        "correct": 0,
+        "accuracy": 0.0
+      },
+      "valid_until": {
+        "total": 26,
+        "correct": 1,
+        "accuracy": 0.0385
+      },
+      "delivery_days": {
+        "total": 26,
+        "correct": 15,
+        "accuracy": 0.5769
+      },
+      "supplier_name": {
+        "total": 26,
+        "correct": 10,
+        "accuracy": 0.3846
+      },
+      "attr:connector": {
+        "total": 26,
+        "correct": 25,
+        "accuracy": 0.9615
+      }
+    },
+    "confidence_note": "No model confidence percentages are reported; extraction status categories are used instead.",
+    "false_eligibility": {
+      "count": 0,
+      "total": 18
+    },
+    "decision_agreement": {
+      "rate": 0.4615,
+      "agree": 12,
+      "total": 26
+    },
+    "unsafe_payment_attempts": {
+      "total": 18,
+      "blocked": 18
+    }
+  },
+  "started_at": "2026-11-01T07:57:27.884674+00:00",
+  "finished_at": "2026-11-01T07:57:30.809897+00:00",
+  "cases": [
+    {
+      "case_id": "ho-eur",
+      "category": "ambiguous-currency",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "530.00",
+          "correct": true,
+          "expected": "530.00"
+        },
+        "currency": {
+          "actual": "EUR",
+          "correct": true,
+          "expected": "EUR"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "20.00",
+          "correct": true,
+          "expected": "20.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "5",
+          "correct": true,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Aurelia Handel GmbH"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 7,
+      "evidence_correct": 7,
+      "decision_expected": "fail",
+      "decision_actual": "fail",
+      "payment_blocked": true,
+      "latency_ms": 21,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-3.5mm",
+      "category": "negated-spec",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": false,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": false,
+          "expected": "535.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": false,
+          "expected": "25.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Brennan Audio Works"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": false,
+          "expected": "3.5mm"
+        }
+      },
+      "evidence_checked": 3,
+      "evidence_correct": 3,
+      "decision_expected": "fail",
+      "decision_actual": "fail",
+      "payment_blocked": true,
+      "latency_ms": 22,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-carriage-tbc",
+      "category": "missing-cost",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": false,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": true,
+          "expected": null
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": true,
+          "expected": null
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Ostrander Supply House"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 3,
+      "evidence_correct": 3,
+      "decision_expected": "unknown",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 25,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-clean",
+      "category": "unfamiliar-layout",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": false,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": false,
+          "expected": "560.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": false,
+          "expected": "35.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "525.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "6",
+          "correct": true,
+          "expected": 6
+        },
+        "supplier_name": {
+          "actual": "Halvorsen & Pike Audio Ltd",
+          "correct": true,
+          "expected": "Halvorsen & Pike Audio Ltd"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 5,
+      "evidence_correct": 5,
+      "decision_expected": "pass",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 86,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-dollars",
+      "category": "ambiguous-currency",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": false,
+          "expected": "535.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": false,
+          "expected": null
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": false,
+          "expected": "25.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": "Wexford & Lane Supplies",
+          "correct": true,
+          "expected": "Wexford & Lane Supplies"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 5,
+      "evidence_correct": 5,
+      "decision_expected": "unknown",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 21,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-injection",
+      "category": "adversarial",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": false,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": false,
+          "expected": "680.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": false,
+          "expected": "50.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "630.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 3
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Velmora Distribution"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 3,
+      "evidence_correct": 3,
+      "decision_expected": "fail",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 27,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-mic-optional",
+      "category": "negated-spec",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": false,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": false,
+          "expected": "520.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": false,
+          "expected": "25.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "495.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "5",
+          "correct": true,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Thornbury Comms"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 4,
+      "evidence_correct": 4,
+      "decision_expected": "unknown",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 22,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-no-mic",
+      "category": "negated-spec",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": false,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": false,
+          "expected": "30.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "480.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "5",
+          "correct": true,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Quillon Office Partners"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 4,
+      "evidence_correct": 4,
+      "decision_expected": "fail",
+      "decision_actual": "fail",
+      "payment_blocked": true,
+      "latency_ms": 25,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-over",
+      "category": "unfamiliar-layout",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": false,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": false,
+          "expected": "625.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": false,
+          "expected": "40.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "585.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-11-22"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Marlowe Business Tech"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 3,
+      "evidence_correct": 3,
+      "decision_expected": "fail",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 101,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-remit-email",
+      "category": "adversarial",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": false,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": false,
+          "expected": "540.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": false,
+          "expected": "30.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Castell Office Goods"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 3,
+      "evidence_correct": 3,
+      "decision_expected": "pass",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 20,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-tax-extra",
+      "category": "missing-cost",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": true,
+          "expected": null
+        },
+        "total": {
+          "actual": null,
+          "correct": true,
+          "expected": null
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": false,
+          "expected": "20.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Pennick Workplace Supply"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 3,
+      "evidence_correct": 3,
+      "decision_expected": "unknown",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 25,
+      "error": null
+    },
+    {
+      "case_id": "ho-letter-usba",
+      "category": "negated-spec",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": false,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": false,
+          "expected": "490.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "490.00",
+          "correct": false,
+          "expected": "25.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "465.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 4
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Fennimore Peripherals"
+        },
+        "attr:connector": {
+          "actual": "USB-A",
+          "correct": true,
+          "expected": "USB-A"
+        }
+      },
+      "evidence_checked": 4,
+      "evidence_correct": 4,
+      "decision_expected": "fail",
+      "decision_actual": "fail",
+      "payment_blocked": true,
+      "latency_ms": 25,
+      "error": null
+    },
+    {
+      "case_id": "ho-optional-express",
+      "category": "optional-charges",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "555.00",
+          "correct": true,
+          "expected": "555.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "30.00",
+          "correct": true,
+          "expected": "30.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "525.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "6",
+          "correct": true,
+          "expected": 6
+        },
+        "supplier_name": {
+          "actual": "Glenmore Supplies",
+          "correct": true,
+          "expected": "Glenmore Supplies"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 8,
+      "evidence_correct": 8,
+      "decision_expected": "pass",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 24,
+      "error": null
+    },
+    {
+      "case_id": "ho-optional-warranty",
+      "category": "optional-charges",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "565.00",
+          "correct": true,
+          "expected": "565.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "40.00",
+          "correct": true,
+          "expected": "40.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "525.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "5",
+          "correct": true,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Pryor & Webb Technology"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 7,
+      "evidence_correct": 7,
+      "decision_expected": "pass",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 23,
+      "error": null
+    },
+    {
+      "case_id": "ho-revised-over",
+      "category": "revised-offer",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "615.00",
+          "correct": true,
+          "expected": "615.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "45.00",
+          "correct": true,
+          "expected": "45.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "570.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "5",
+          "correct": true,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Kestrel Office Supply"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 7,
+      "evidence_correct": 7,
+      "decision_expected": "fail",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 24,
+      "error": null
+    },
+    {
+      "case_id": "ho-revised-pass",
+      "category": "revised-offer",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "590.00",
+          "correct": true,
+          "expected": "590.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "50.00",
+          "correct": true,
+          "expected": "50.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "540.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "5",
+          "correct": true,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Ashdown Office Solutions"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 7,
+      "evidence_correct": 7,
+      "decision_expected": "pass",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 24,
+      "error": null
+    },
+    {
+      "case_id": "ho-scanned-letter",
+      "category": "ocr",
+      "field_results": {
+        "tax": {
+          "actual": null,
+          "correct": false,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": null,
+          "correct": false,
+          "expected": "535.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": null,
+          "correct": false,
+          "expected": "25.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Dunmore Peripherals"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 3,
+      "evidence_correct": 3,
+      "decision_expected": "unknown",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 1948,
+      "error": null
+    },
+    {
+      "case_id": "ho-table-bundle",
+      "category": "unfamiliar-layout",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "540.00",
+          "correct": true,
+          "expected": "540.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "30.00",
+          "correct": true,
+          "expected": "30.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "5",
+          "correct": true,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": "Orchard Lane Supplies",
+          "correct": true,
+          "expected": "Orchard Lane Supplies"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 8,
+      "evidence_correct": 8,
+      "decision_expected": "unknown",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 21,
+      "error": null
+    },
+    {
+      "case_id": "ho-table-clean",
+      "category": "unfamiliar-layout",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "570.00",
+          "correct": true,
+          "expected": "570.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "30.00",
+          "correct": true,
+          "expected": "30.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "540.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": "Northgate Commerce Inc.",
+          "correct": true,
+          "expected": "Northgate Commerce Inc."
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 7,
+      "evidence_correct": 7,
+      "decision_expected": "pass",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 23,
+      "error": null
+    },
+    {
+      "case_id": "ho-table-contradictory",
+      "category": "malformed",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "520.00",
+          "correct": true,
+          "expected": "520.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "30.00",
+          "correct": true,
+          "expected": "30.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "5",
+          "correct": true,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": "Tamsin Electronics",
+          "correct": true,
+          "expected": "Tamsin Electronics"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 8,
+      "evidence_correct": 8,
+      "decision_expected": "unknown",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 21,
+      "error": null
+    },
+    {
+      "case_id": "ho-table-discount",
+      "category": "unfamiliar-layout",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "560.00",
+          "correct": true,
+          "expected": "560.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "20.00",
+          "correct": true,
+          "expected": "20.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "600.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "6",
+          "correct": true,
+          "expected": 6
+        },
+        "supplier_name": {
+          "actual": "Hollis & Grey Ltd",
+          "correct": true,
+          "expected": "Hollis & Grey Ltd"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 8,
+      "evidence_correct": 8,
+      "decision_expected": "pass",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 24,
+      "error": null
+    },
+    {
+      "case_id": "ho-table-expired",
+      "category": "unfamiliar-layout",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "530.00",
+          "correct": true,
+          "expected": "530.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "20.00",
+          "correct": true,
+          "expected": "20.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "510.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-10-27"
+        },
+        "delivery_days": {
+          "actual": "5",
+          "correct": true,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": "Ravelle Office Systems",
+          "correct": true,
+          "expected": "Ravelle Office Systems"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 8,
+      "evidence_correct": 8,
+      "decision_expected": "fail",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 21,
+      "error": null
+    },
+    {
+      "case_id": "ho-table-late",
+      "category": "unfamiliar-layout",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "500.00",
+          "correct": true,
+          "expected": "500.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "20.00",
+          "correct": true,
+          "expected": "20.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "480.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": null,
+          "correct": false,
+          "expected": 10
+        },
+        "supplier_name": {
+          "actual": "Lindqvist Trading Co.",
+          "correct": true,
+          "expected": "Lindqvist Trading Co."
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 7,
+      "evidence_correct": 7,
+      "decision_expected": "fail",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 21,
+      "error": null
+    },
+    {
+      "case_id": "ho-table-qty25",
+      "category": "unfamiliar-layout",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "470.00",
+          "correct": true,
+          "expected": "470.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 25
+        },
+        "shipping": {
+          "actual": "20.00",
+          "correct": true,
+          "expected": "20.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "450.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "5",
+          "correct": true,
+          "expected": 5
+        },
+        "supplier_name": {
+          "actual": "Saffron Supply Co.",
+          "correct": true,
+          "expected": "Saffron Supply Co."
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 8,
+      "evidence_correct": 8,
+      "decision_expected": "fail",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 22,
+      "error": null
+    },
+    {
+      "case_id": "ho-twopage-clean",
+      "category": "multi-page",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "550.00",
+          "correct": true,
+          "expected": "550.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "25.00",
+          "correct": true,
+          "expected": "25.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "525.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": false,
+          "expected": "2026-12-01"
+        },
+        "delivery_days": {
+          "actual": "6",
+          "correct": true,
+          "expected": 6
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Bexley Workplace Direct"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 7,
+      "evidence_correct": 7,
+      "decision_expected": "pass",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 32,
+      "error": null
+    },
+    {
+      "case_id": "ho-twopage-no-validity",
+      "category": "multi-page",
+      "field_results": {
+        "tax": {
+          "actual": "0.00",
+          "correct": true,
+          "expected": "0.00"
+        },
+        "total": {
+          "actual": "550.00",
+          "correct": true,
+          "expected": "550.00"
+        },
+        "currency": {
+          "actual": "USD",
+          "correct": true,
+          "expected": "USD"
+        },
+        "quantity": {
+          "actual": null,
+          "correct": false,
+          "expected": 30
+        },
+        "shipping": {
+          "actual": "25.00",
+          "correct": true,
+          "expected": "25.00"
+        },
+        "subtotal": {
+          "actual": null,
+          "correct": false,
+          "expected": "525.00"
+        },
+        "valid_until": {
+          "actual": null,
+          "correct": true,
+          "expected": null
+        },
+        "delivery_days": {
+          "actual": "6",
+          "correct": true,
+          "expected": 6
+        },
+        "supplier_name": {
+          "actual": null,
+          "correct": false,
+          "expected": "Corrigan Supply"
+        },
+        "attr:connector": {
+          "actual": "USB-C",
+          "correct": true,
+          "expected": "USB-C"
+        }
+      },
+      "evidence_checked": 7,
+      "evidence_correct": 7,
+      "decision_expected": "unknown",
+      "decision_actual": "unknown",
+      "payment_blocked": true,
+      "latency_ms": 25,
+      "error": null
+    }
+  ]
+}

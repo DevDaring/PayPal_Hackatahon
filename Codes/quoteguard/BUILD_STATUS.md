@@ -22,7 +22,9 @@ Legend: ✅ implemented and verified · 🟡 implemented, verification needs a c
 | Signed webhook handling (store → verify → dedupe → lookup) | ✅ | test 13; live `CHECKOUT.ORDER.APPROVED` and `PAYMENT.CAPTURE.COMPLETED` deliveries signature-verified and applied |
 | Comparison, approval, checkout and receipt screens | ✅ | e2e screenshots |
 | Three reproducible sample quotations + extra fixtures | ✅ | `fixtures/` |
-| Tests for payment and authorization boundaries | ✅ | 34 backend tests |
+| Tests for payment and authorization boundaries | ✅ | 61 backend tests |
+| Negated / conditional / conflicting specifications cannot pass (value **and** cited sentence assessed) | ✅ | policy + end-to-end document → approval tests |
+| Recovery enforces the same authority & provider-order checks as capture; existing captures still reconciled after expiry | ✅ | 8 recovery tests |
 
 ## P1 — differentiators
 
@@ -40,7 +42,9 @@ Legend: ✅ implemented and verified · 🟡 implemented, verification needs a c
 |---|---|
 | Merchant-admin partial refund with concurrency guard | 🟡 implemented, test 18; live sandbox refund not yet run |
 | Grounded Q&A side panel with read-only PayPal Agent Toolkit tools (order details, transaction lookup) | ✅ (test + live sandbox call) |
-| Agent Mode: autonomous pipeline with two human checkpoints | ✅ (e2e) |
+| Agent Mode: resumable on the user's own request & PDFs, editable requirements, failure/stall states with retry, three consents | ✅ (e2e incl. refresh-resume) |
+| Independent 26-case holdout, rules vs AI ×3, labels frozen before runs | ✅ (`reports/`) |
+| Compare: decision + evidence grid above the fold, explanation on demand, confirmed vs preview labels, request-relative what-if range; CSV formula-injection guard | ✅ |
 | “What QuoteGuard caught” impact card; AG Grid live what-if column, tooltips, CSV export; AG Grid evaluation grid with filters | ✅ |
 | OCR for image-only PDFs via vision model (always needs review) | ✅ (hosted config enables it) |
 | Bengali/Hindi input | ⏸ |

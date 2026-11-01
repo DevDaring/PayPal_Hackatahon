@@ -9,9 +9,9 @@ Four kinds of evidence, kept separate:
 | Live AI evaluation | 24 labelled synthetic quotes through the extraction + policy pipeline | `python -m quoteguard.cli run-eval llm` (or the Evaluation page) | No | Yes |
 | Actual sandbox checks | Real PayPal Sandbox calls | manual checklist below + Playwright journey | **Yes** | Yes |
 
-## Results — 31 October 2026
+## Results — 1 November 2026 (final revision)
 
-**Backend (pytest 9.2, PostgreSQL 16):** `34 passed` (incl. Agent Toolkit tool scoping) (run 3× consecutively, no flakes, ~35 s).
+**Backend (pytest 9.2, PostgreSQL 16):** `61 passed` (~54 s). Beyond the brief's 18 checks: negated/conditional/conflicting specifications at the policy layer and end-to-end (PDF → extraction → approval rejected, from a supplier *with* a configured merchant); recovery after approval expiry (no new capture), recovery with valid approval under 4 racing deliveries (one capture, one request id), recovery against wrong payee / missing payee / wrong operation / changed amount (no capture), an existing capture recorded after expiry, missing payee in normal capture; Agent Toolkit tool scoping; regressions from the holdout.
 
 | # (brief §14) | Test |
 |---|---|
@@ -45,7 +45,7 @@ Bugs these tests found and fixed during the build: an inverted lock order betwee
 
 Stored in `reports/` and on the Evaluation page. Checkout is assumed configured so extraction and policy are measured in isolation.
 
-| Run (UTC) | Mode / model | Decision agreement | Unsafe blocked | False blocking | Evidence refs valid |
+| Run (UTC) | Mode / model | Decision agreement | Non-payable rejected by policy | False blocking | Evidence refs valid |
 |---|---|---|---|---|---|
 | 19:04 | deterministic rules | 24/24 | 18/18 | 0/6 | 377/380 |
 | 19:04 | gemini-2.5-flash | 20/24 | **17/18** | 2/6 | 377/377 |
@@ -60,6 +60,21 @@ What the first model run found, and the fixes (system changes — labels were no
 4. When the model returns nothing for a critical field that the deterministic parser cites on the page, the parser's value is used and the fallback is noted.
 
 Caveats: single runs, so no latency percentiles (individual timings are shown); one template family; the deterministic baseline was written alongside these templates, so its 24/24 overstates real-world accuracy; model output varies between runs.
+
+### Independent holdout (dataset `quoteguard-holdout-v1`, 26 unfamiliar quotes)
+
+Built by a separate generator (`backend/quoteguard/holdout.py`) with different wording and layouts: prose letters without field labels, invoice tables, two-page terms, revised offers, optional charges, negated/optional specs, ambiguous currency, injected instructions and a scanned page. **Labels were committed (`fixtures/holdout_manifest.json`, commit `76f6781`) before any run.** Same PDFs and labels for both extractors; all runs kept.
+
+| Runs (1 Nov, UTC) | Extractor | Decisions matching labels | Non-payable marked payable | Payable wrongly blocked | Cited lines valid | Needs human review | Median time / doc | Tokens per run |
+|---|---|---|---|---|---|---|---|---|
+| 07:43 (unseen) | rules | 11/26 | 0/18 | 8/8 | 147/147 | 23/26 | 22 ms | 0 |
+| 07:43–07:47 (unseen) | gemini-2.5-flash ×3 | 24/26 each | **1/18 each** | 1/8 each | 377/377, 380/380, 380/380 | 9/26 | ≈4.9 s | ≈47k |
+| 07:57 after fixes (seen) | rules | 12/26 | 0/18 | 8/8 | 147/147 | 22/26 | 24 ms | 0 |
+| 07:57–08:03 after fixes (seen) | gemini-2.5-flash ×3 | 26/26 each | 0/18 | 0/8 | 379/379, 380/380, 377/377 | 8/26 | ≈4.9–5.7 s | ≈47k |
+
+Development set on the final revision (08:05): rules 24/24, Gemini 24/24, 0 false eligibility, 0 false blocks. Reports: `reports/evaluation-20261101-*`.
+
+The unseen false eligibility (`ho-letter-3.5mm`: “charges over USB-C; audio connects through the 3.5 mm jack”) exposed two general defects in the specification checker — clauses were split on the decimal point in “3.5 mm”, hiding the conflicting connector, and plural terms (“microphones”) were not matched, causing the one false block. Both were fixed with regression tests; runs after the fix are labelled **seen** in the stored config and in the UI, and must not be described as unseen. What the holdout shows: on unfamiliar layouts the rules parser fails safe but blocks almost everything payable, while the model plus deterministic checks reads them correctly; the checks — not the model — are what keep a misread from becoming payable.
 
 ## Manual real-sandbox checklist
 

@@ -21,14 +21,14 @@ QuoteGuard reads supplier quotations, links every extracted term to the exact li
 | Pay | PayPal Orders v2 + official PayPal buttons | Order built only from the approved snapshot; re-validated before order creation and capture; stable `PayPal-Request-Id`s |
 | Prove | Receipt, decision replay, evidence package | Provider IDs, every provider call, hash-chained audit log (limits stated) |
 
-**Agent Mode** runs the pipeline autonomously and stops at two human checkpoints; the assistant can query PayPal through **PayPal Agent Toolkit** read-only tools scoped to the request.
+**Agent Mode** runs a resumable workflow on your own request and PDFs (or the sample): it reads, cites, verifies and decides on its own, and stops at the three consents it cannot give — you confirm the requirements, an approver signs the exact purchase, the buyer authorises in PayPal. The assistant can query PayPal through **PayPal Agent Toolkit** read-only tools scoped by the server to the request.
 
 **Demo Lab** runs controlled attacks through the real services: amount or payee changed after approval (even by editing the database directly), a PDF that tells the AI to ignore the budget and pay an email address, five simultaneous Pay/Capture clicks, and a capture whose response is lost.
 
 ## Measured, not claimed
 
-- 34 backend tests on real PostgreSQL (payments, authorization, concurrency, webhooks, Demo Lab), frontend unit tests, Playwright journey against the live site.
-- 24-case labelled evaluation (clean, ambiguous, malformed, adversarial). Latest Gemini 2.5 Flash run: 24/24 decisions agree, 18/18 unsafe cases blocked, 0/6 false blocks, 379/380 evidence references valid — a single run on synthetic templates. Every run, including the first one that found an unsafe case, is kept in [`Codes/quoteguard/reports/`](Codes/quoteguard/reports/).
+- 61 backend tests on real PostgreSQL (negated specs end-to-end, recovery after expiry, wrong/missing payee, duplicate deliveries, concurrency, webhooks, Demo Lab), frontend unit tests, Playwright journeys against the live site including a real Sandbox buyer approval and capture.
+- **Why AI:** on a separate holdout of 26 *unfamiliar* quote layouts (labels frozen before testing), the rules parser made 11/26 correct decisions; Gemini 2.5 Flash + QuoteGuard's checks made 24/26 in each of three runs. That run also exposed one false eligibility — fixed, regression-tested, and every later run is labelled “seen” (26/26 ×3). Development set: 24/24. Policy-level metrics are named “non-payable cases rejected by policy”; payment-boundary behaviour is tested separately. All runs are kept in [`Codes/quoteguard/reports/`](Codes/quoteguard/reports/).
 
 ## Documentation
 
@@ -41,6 +41,7 @@ QuoteGuard reads supplier quotations, links every extracted term to the exact li
 | Testing, evaluation, sandbox checklist | [`docs/TESTING.md`](Codes/quoteguard/docs/TESTING.md) |
 | Deployment (self-host, Docker Compose, Render) | [`docs/DEPLOYMENT.md`](Codes/quoteguard/docs/DEPLOYMENT.md) |
 | Build status | [`BUILD_STATUS.md`](Codes/quoteguard/BUILD_STATUS.md) |
+| Demo video production script | [`Video_Script.md`](Video_Script.md) |
 | Submission copy & demo script | [`submission/`](Codes/quoteguard/submission/) |
 
 ## Stack

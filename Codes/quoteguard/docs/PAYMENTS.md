@@ -64,6 +64,7 @@ sequenceDiagram
 ## Ambiguity and reconciliation
 
 - Timeout, connection error or 5xx → `reconciling`, a `reconcile_payment` job is queued (exponential backoff). Never `failed`, never `completed` without evidence.
+- Before recovery issues any **new** capture it runs the same checks as normal capture (operation id, amount, currency, payee — a missing payee is a mismatch — and approval integrity/expiry). If they fail, nothing is captured and the original operation is kept for audit. A capture that **already happened** is always recorded, even after the approval expired.
 - Reconcile looks up the order: captures present → apply them (amount verified); `APPROVED` with a capture intent → retry capture with the **same** capture request ID; `CREATED` → back to `awaiting_payer`; `VOIDED` → canceled. A replacement order is never created because a capture timed out.
 - If order creation itself was ambiguous, reconcile replays the create with the same order request ID — PayPal returns the same order.
 - Worker restart: every 15 s the worker moves operations stuck in `order_creating`/`capture_pending` for more than 45 s into reconciliation (`recover_stuck`).

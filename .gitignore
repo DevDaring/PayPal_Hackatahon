@@ -4,3 +4,6 @@ Codes/Prompt.md
 .env
 .env.*
 !.env.example
+
+# Video production media (large binaries)
+Video/
