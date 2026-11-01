@@ -1,0 +1,6 @@
+# Personal secrets and local notes — never commit
+Codes/.env
+Codes/Prompt.md
+.env
+.env.*
+!.env.example
